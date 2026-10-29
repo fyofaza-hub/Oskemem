@@ -1,17 +1,20 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { Post, User, Place } from "@/types";
+import type { CategoryId, Companion, Place, PlaceInput, Post, PriceLevel, User } from "@/types";
 import { useApp } from "@/context/AppContext";
 import { useToast } from "@/context/ToastContext";
 import { cn, compressImage, validateImageFile } from "@/lib/utils";
 import { tr } from "@/i18n/runtime";
 import { PageHeader } from "@/components/ui/Bits";
 import { Button, ButtonLink, IconButton } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Field";
+import { Field, Input, Textarea } from "@/components/ui/Field";
+import { Chip } from "@/components/ui/Chip";
 import { Icon } from "@/components/ui/Icon";
 import { EmptyState } from "@/components/ui/Bits";
 import { Modal } from "@/components/ui/Modal";
-import { categoryMap } from "@/data/categories";
+import { categories, categoryMap, companionOptions } from "@/data/categories";
+import { categoryIconNames } from "@/components/ui/Category";
+import { MapView } from "@/components/map/MapView";
 import { uploadPlaceImage, supabaseConfigured } from "@/lib/supabase";
 
 type Tab = "posts" | "places" | "users" | "settings";
@@ -254,22 +257,51 @@ function AdminPosts({ posts, approvePost, rejectPost, moderatePosts, deletePost,
 
 interface AdminPlacesProps {
   places: Place[];
-  setPlaceImage: (id: string, image: string) => { ok: boolean; error?: string };
+  editPlace: (id: string, patch: Partial<PlaceInput>) => { ok: boolean; error?: string };
   query: string;
   onQueryChange: (value: string) => void;
 }
 
+const ADMIN_CITY_CENTER: [number, number] = [49.9481, 82.6286];
+
+const adminPriceOptions: Array<{ value: PriceLevel; label: string; hint: string }> = [
+  { value: 0, label: tr("Бесплатно"), hint: tr("парк, набережная, прогулка") },
+  { value: 1, label: "₸", hint: tr("кофе или перекус") },
+  { value: 2, label: "₸₸", hint: tr("ужин или билет") },
+  { value: 3, label: "₸₸₸", hint: tr("премиум-вечер") },
+];
+
+const adminDistrictOptions = [tr("Центр"), tr("Стрелка"), tr("Студгородок"), tr("Шмелёв Лог"), tr("Левый берег"), tr("Октябрьский")];
+
+const defaultCompanions: Companion[] = ["solo", "couple", "friends", "family"];
+
+interface PlaceFormState {
+  name: string;
+  category: CategoryId;
+  district: string;
+  address: string;
+  description: string;
+  shortDescription: string;
+  tags: string;
+  priceLevel: PriceLevel;
+  companions: Companion[];
+  coords: [number, number] | null;
+  image: string | null;
+}
+
 /**
- * Шаг 2: управление фотографиями мест.
- * • превью мгновенно после выбора файла или ссылки;
- * • сохранение: локально — оптимизированный dataURL,
- *   в Supabase — файл в бакет guide-images (только admin по RLS);
- * • после сохранения новая обложка сразу видна в гиде, на карте и на главной.
+ * Шаг 3: полное управление локациями из базы данных.
+ * • все поля карточки: название, категория, район, адрес, точка на карте,
+ *   описание, теги, ценник и «с кем хорошо»;
+ * • фото — файлом или ссылкой, с мгновенным превью;
+ * • для seed-мест и мест из базы правки сохраняются в localStorage,
+ *   а при настроенном Supabase дублируются в public.places;
+ * • после сохранения изменения сразу видны в гиде, на карте и на главной.
  */
-function AdminPlaces({ places, setPlaceImage, query, onQueryChange }: AdminPlacesProps) {
+function AdminPlaces({ places, editPlace, query, onQueryChange }: AdminPlacesProps) {
   const { toast } = useToast();
   const [editorId, setEditorId] = useState<string | null>(null);
-  const [candidate, setCandidate] = useState<string | null>(null);
+  const [form, setForm] = useState<PlaceFormState | null>(null);
   const [fileUrl, setFileUrl] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -284,21 +316,35 @@ function AdminPlaces({ places, setPlaceImage, query, onQueryChange }: AdminPlace
 
   const selected = places.find((place) => place.id === editorId) ?? null;
 
-  const openEditor = (placeId: string) => {
-    const place = places.find((item) => item.id === placeId);
-    setEditorId(placeId);
-    setCandidate(place?.image ?? null);
+  const patchForm = (patch: Partial<PlaceFormState>) =>
+    setForm((prev) => (prev ? { ...prev, ...patch } : prev));
+
+  const openEditor = (place: Place) => {
+    setEditorId(place.id);
+    setForm({
+      name: place.name,
+      category: place.category,
+      district: place.district,
+      address: place.address,
+      description: place.description,
+      shortDescription: place.shortDescription,
+      tags: place.tags.join(", "),
+      priceLevel: place.priceLevel,
+      companions: place.companions.length ? [...place.companions] : [...defaultCompanions],
+      coords: [...place.coords] as [number, number],
+      image: place.image || null,
+    });
     setFileUrl("");
   };
 
   const closeEditor = () => {
     setEditorId(null);
-    setCandidate(null);
+    setForm(null);
     setFileUrl("");
   };
 
   const handlePickFile = async (file: File | undefined) => {
-    if (!file) return;
+    if (!file || !form) return;
     if (!validateImageFile(file)) {
       toast({ title: tr("Файл не поддерживается"), description: tr("Форматы JPG/PNG/WebP до 8 МБ."), variant: "error" });
       return;
@@ -306,12 +352,12 @@ function AdminPlaces({ places, setPlaceImage, query, onQueryChange }: AdminPlace
     setBusy(true);
     try {
       const compressed = await compressImage(file, 1600);
-      setCandidate(compressed);
-      if (supabaseConfigured) {
+      patchForm({ image: compressed });
+      if (supabaseConfigured && editorId) {
         // В продакшене (Supabase): заливаем в бакет под уникальным именем.
-        const publicUrl = await uploadPlaceImage(editorId ?? "", file)
+        const publicUrl = await uploadPlaceImage(editorId, file)
           .catch((error) => { toast({ title: tr("Ошибка загрузки"), description: String(error), variant: "error" }); return null; });
-        if (publicUrl) setCandidate(publicUrl);
+        if (publicUrl) patchForm({ image: publicUrl });
       }
     } finally {
       setBusy(false);
@@ -321,20 +367,50 @@ function AdminPlaces({ places, setPlaceImage, query, onQueryChange }: AdminPlace
   const applyUrl = () => {
     const clean = fileUrl.trim();
     if (!clean) return;
-    setCandidate(clean.includes("?") || clean.startsWith("data:") ? clean : `${clean}?v=${Date.now()}`);
+    patchForm({ image: clean.includes("?") || clean.startsWith("data:") ? clean : `${clean}?v=${Date.now()}` });
     setFileUrl("");
   };
 
   const save = () => {
-    if (!selected || !candidate) return;
-    const result = setPlaceImage(selected.id, candidate);
+    if (!form || !selected) return;
+    if (form.name.trim().length < 2) {
+      toast({ title: tr("Как называется место?"), variant: "error" });
+      return;
+    }
+    if (!form.coords) {
+      toast({ title: tr("Поставьте точку на карте"), variant: "error" });
+      return;
+    }
+    if (form.description.trim().length < 12) {
+      toast({
+        title: tr("Добавьте пару слов о месте"),
+        description: tr("Хотя бы одно предложение — чем оно особенное."),
+        variant: "error",
+      });
+      return;
+    }
+    const result = editPlace(selected.id, {
+      name: form.name.trim(),
+      category: form.category,
+      district: form.district.trim() || tr("Өскемен"),
+      address: form.address.trim() || tr("Точка на карте"),
+      description: form.description.trim(),
+      shortDescription:
+        form.shortDescription.trim() ||
+        `${form.description.trim().slice(0, 92)}${form.description.trim().length > 92 ? "…" : ""}`,
+      coords: form.coords,
+      image: form.image ?? "",
+      tags: form.tags.split(",").map((tag) => tag.trim().replace(/^#/, "")).filter(Boolean).slice(0, 6),
+      priceLevel: form.priceLevel,
+      companions: form.companions.length ? form.companions : [...defaultCompanions],
+    });
     if (!result.ok) {
-      toast({ title: tr("Не удалось сохранить фото"), description: result.error, variant: "error" });
+      toast({ title: tr("Не удалось сохранить место"), description: result.error, variant: "error" });
       return;
     }
     closeEditor();
     toast({
-      title: tr("Обложка обновлена"),
+      title: tr("Место обновлено"),
       description: `${selected.name} — ${tr("изменения уже видны в гиде, на карте и на главной.")}`,
       variant: "success",
     });
@@ -360,10 +436,10 @@ function AdminPlaces({ places, setPlaceImage, query, onQueryChange }: AdminPlace
                 </p>
               </div>
               <IconButton
-                icon="image"
-                label={tr("Заменить фото")}
+                icon="edit"
+                label={tr("Редактировать место")}
                 size="sm"
-                onClick={() => openEditor(place.id)}
+                onClick={() => openEditor(place)}
               />
             </article>
           ))}
@@ -372,66 +448,254 @@ function AdminPlaces({ places, setPlaceImage, query, onQueryChange }: AdminPlace
         <EmptyState icon="gallery" title={tr("Мест не найдено")} description={tr("Попробуйте изменить запрос.")} />
       )}
 
-      {/* Редактор фотографии места */}
+      {/* Редактор карточки места */}
       <Modal
-        open={Boolean(selected)}
+        open={Boolean(selected) && Boolean(form)}
         onClose={closeEditor}
-        title={tr("Фотография места")}
+        title={tr("Редактор места")}
         description={selected?.name}
-        size="md"
-      >
-        {selected ? (
-          <div className="space-y-4 p-4 sm:p-5">
-            <div className="overflow-hidden rounded-2xl border border-line bg-sunken">
-              {candidate ? (
-                <img src={candidate} alt="" className="aspect-[16/9] w-full object-cover" />
-              ) : (
-                <div className="flex aspect-[16/9] w-full items-center justify-center text-sm text-muted">
-                  {tr("Фото не выбрано")}
-                </div>
-              )}
+        size="xl"
+        footer={
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="flex items-center gap-2 text-meta text-muted">
+              <Icon name="info" size={14} className="shrink-0" />
+              {tr("Правки сразу применяются в гиде, на карте, в ленте и на главной.")}
+            </p>
+            <div className="flex gap-2 sm:shrink-0">
+              <Button variant="secondary" onClick={closeEditor} className="flex-1 sm:flex-none">
+                {tr("Отмена")}
+              </Button>
+              <Button variant="primary" icon="check" onClick={save} disabled={busy} className="flex-1 sm:flex-none">
+                {busy ? tr("Сохраняем…") : tr("Сохранить")}
+              </Button>
             </div>
+          </div>
+        }
+      >
+        {selected && form ? (
+          <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[1fr_1fr]">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="relative h-[260px] overflow-hidden rounded-2xl border border-line sm:h-[300px]">
+                  <MapView
+                    markers={[]}
+                    center={form.coords ?? ADMIN_CITY_CENTER}
+                    zoom={form.coords ? 16 : 13}
+                    fitToMarkers={false}
+                    showLocate={false}
+                    className="h-full"
+                    onMapClick={(value) => patchForm({ coords: value })}
+                    pickMarker={form.coords ? { coords: form.coords, label: form.name || selected.name } : null}
+                  />
+                  {form.coords ? (
+                    <div className="absolute inset-x-3 bottom-3 z-[65] flex items-center justify-between gap-2 rounded-xl bg-surface/95 px-3 py-2 shadow-card">
+                      <span className="flex items-center gap-1.5 text-meta font-medium text-accent-ink">
+                        <Icon name="check" size={14} />
+                        {tr("Точка выбрана")}
+                      </span>
+                      <span className="tabular-nums text-meta text-muted">
+                        {form.coords[0].toFixed(5)}, {form.coords[1].toFixed(5)}
+                      </span>
+                    </div>
+                  ) : null}
+                </div>
+                {form.coords ? (
+                  <Button variant="ghost" size="sm" icon="close" onClick={() => patchForm({ coords: null })}>
+                    {tr("Переставить точку")}
+                  </Button>
+                ) : (
+                  <p className="text-meta text-muted">
+                    {tr("Нажмите на карту, чтобы переставить координаты места.")}
+                  </p>
+                )}
+              </div>
 
-            <div>
-              <p className="field-label">{tr("Загрузить новое фото с компьютера")}</p>
-              <label className="btn btn-secondary cursor-pointer">
-                <Icon name="upload" size={16} />
-                {busy ? tr("Обрабатываем…") : tr("Выбрать файл")}
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  className="hidden"
-                  onChange={(event) => handlePickFile(event.target.files?.[0])}
-                />
-              </label>
+              <div className="relative aspect-[16/9] overflow-hidden rounded-2xl bg-sunken">
+                {form.image ? (
+                  <img src={form.image} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full flex-col items-center justify-center gap-2 text-muted">
+                    <Icon name="camera" size={24} />
+                    <p className="text-sm">{tr("Фото не выбрано")}</p>
+                  </div>
+                )}
+              </div>
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                id="admin-place-photo"
+                onChange={(event) => void handlePickFile(event.target.files?.[0])}
+              />
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon="upload"
+                  loading={busy}
+                  onClick={() => document.getElementById("admin-place-photo")?.click()}
+                  className="flex-1"
+                >
+                  {busy ? tr("Обрабатываем…") : tr("Заменить фото")}
+                </Button>
+                {form.image ? (
+                  <IconButton icon="close" label={tr("Убрать фото")} variant="bordered" size="sm" onClick={() => patchForm({ image: null })} />
+                ) : null}
+              </div>
               {!supabaseConfigured ? (
-                <p className="mt-1.5 text-meta text-muted">
+                <p className="text-meta text-muted">
                   {tr("Файл будет сохранён локально: подключите Supabase, чтобы фото загружалось в бакет guide-images.")}
                 </p>
               ) : null}
-            </div>
 
-            <div>
-              <p className="field-label">{tr("Или укажите ссылку на изображение")}</p>
-              <div className="flex gap-2">
-                <Input
-                  value={fileUrl}
-                  onChange={(event) => setFileUrl(event.target.value)}
-                  placeholder="https://…/photo.jpg"
-                />
-                <Button variant="secondary" size="md" onClick={applyUrl}>
-                  {tr("Применить")}
-                </Button>
+              <div>
+                <p className="field-label">{tr("Или укажите ссылку на изображение")}</p>
+                <div className="flex gap-2">
+                  <Input
+                    value={fileUrl}
+                    onChange={(event) => setFileUrl(event.target.value)}
+                    placeholder="https://…/photo.jpg"
+                  />
+                  <Button variant="secondary" size="md" onClick={applyUrl}>
+                    {tr("Применить")}
+                  </Button>
+                </div>
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2 pt-1">
-              <Button variant="primary" size="md" icon="check" onClick={save} disabled={!candidate || busy}>
-                {tr("Сохранить и заменить")}
-              </Button>
-              <Button variant="ghost" size="md" onClick={closeEditor}>
-                {tr("Отмена")}
-              </Button>
+            <div className="min-w-0 space-y-5">
+              <Field id="admin-place-name" label={tr("Название места")}>
+                <Input
+                  id="admin-place-name"
+                  value={form.name}
+                  onChange={(event) => patchForm({ name: event.target.value })}
+                  maxLength={70}
+                />
+              </Field>
+
+              <div>
+                <p className="field-label">{tr("Категория")}</p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {categories.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      aria-pressed={form.category === item.id}
+                      onClick={() => patchForm({ category: item.id })}
+                      className={cn(
+                        "flex h-10 items-center gap-2 rounded-xl border px-3 text-left text-sm font-medium transition-colors",
+                        form.category === item.id
+                          ? "border-accent bg-accent-soft text-accent-ink"
+                          : "border-line bg-surface text-muted hover:border-line-strong hover:text-fg",
+                      )}
+                    >
+                      <Icon name={categoryIconNames[item.id]} size={16} className="shrink-0" />
+                      <span className="truncate">{item.shortLabel}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field id="admin-place-district" label={tr("Район")}>
+                  <Input
+                    id="admin-place-district"
+                    value={form.district}
+                    onChange={(event) => patchForm({ district: event.target.value })}
+                    list="admin-place-districts"
+                    maxLength={40}
+                  />
+                  <datalist id="admin-place-districts">
+                    {adminDistrictOptions.map((item) => (
+                      <option key={item} value={item} />
+                    ))}
+                  </datalist>
+                </Field>
+                <Field id="admin-place-address" label={tr("Адрес или ориентир")}>
+                  <Input
+                    id="admin-place-address"
+                    value={form.address}
+                    onChange={(event) => patchForm({ address: event.target.value })}
+                    maxLength={90}
+                    placeholder={tr("Улица, дом")}
+                  />
+                </Field>
+              </div>
+
+              <Field id="admin-place-description" label={tr("Описание")} hint={`${form.description.length}/700 · ${tr("Минимум одно предложение")}`}>
+                <Textarea
+                  id="admin-place-description"
+                  value={form.description}
+                  onChange={(event) => patchForm({ description: event.target.value })}
+                  maxLength={700}
+                  rows={4}
+                />
+              </Field>
+
+              <Field id="admin-place-short" label={tr("Краткое описание")} hint={tr("Показывается в карточках и списке гида")}>
+                <Input
+                  id="admin-place-short"
+                  value={form.shortDescription}
+                  onChange={(event) => patchForm({ shortDescription: event.target.value })}
+                  maxLength={160}
+                />
+              </Field>
+
+              <div>
+                <p className="field-label">{tr("Бюджет")}</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {adminPriceOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      aria-pressed={form.priceLevel === option.value}
+                      title={option.hint}
+                      onClick={() => patchForm({ priceLevel: option.value })}
+                      className={cn(
+                        "h-10 rounded-xl border text-sm font-medium transition-colors",
+                        form.priceLevel === option.value
+                          ? "border-accent bg-accent-soft text-accent-ink"
+                          : "border-line bg-surface text-muted hover:border-line-strong hover:text-fg",
+                      )}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="field-hint">{adminPriceOptions.find((option) => option.value === form.priceLevel)?.hint}</p>
+              </div>
+
+              <div>
+                <p className="field-label">{tr("С кем хорошо")}</p>
+                <div className="flex flex-wrap gap-2">
+                  {companionOptions.map((option) => (
+                    <Chip
+                      key={option.id}
+                      aria-pressed={form.companions.includes(option.id)}
+                      active={form.companions.includes(option.id)}
+                      onClick={() =>
+                        patchForm({
+                          companions: form.companions.includes(option.id)
+                            ? form.companions.filter((item) => item !== option.id)
+                            : [...form.companions, option.id],
+                        })
+                      }
+                    >
+                      {option.label}
+                    </Chip>
+                  ))}
+                </div>
+              </div>
+
+              <Field id="admin-place-tags" label={tr("Теги через запятую")}>
+                <Input
+                  id="admin-place-tags"
+                  value={form.tags}
+                  onChange={(event) => patchForm({ tags: event.target.value })}
+                  maxLength={90}
+                  placeholder={tr("кофе, вид, тихо")}
+                />
+              </Field>
             </div>
           </div>
         ) : null}
@@ -450,7 +714,7 @@ export function AdminPage() {
     posts,
     places,
     siteSettings,
-    setPlaceImage,
+    editPlace,
     approvePost,
     rejectPost,
     moderatePosts,
@@ -550,7 +814,7 @@ export function AdminPage() {
       {tab === "places" ? (
         <AdminPlaces
           places={places}
-          setPlaceImage={setPlaceImage}
+          editPlace={editPlace}
           query={placesQuery}
           onQueryChange={setPlacesQuery}
         />

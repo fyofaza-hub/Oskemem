@@ -28,7 +28,14 @@ import { seedRoutes } from "@/data/routes";
 import { demoAccount, defaultInterests, seedUsers } from "@/data/users";
 import { addMinutes, cartesianRoute, normalize, uid } from "@/lib/utils";
 import { randomSalt, sha256Hex, isLegacyPassword } from "@/lib/security";
-import { supabaseConfigured, pushUserDataChange, type UserDataKind } from "@/lib/supabase";
+import {
+  supabaseConfigured,
+  pushUserDataChange,
+  fetchPlacesFromDatabase,
+  savePlaceToDatabase,
+  deletePlaceFromDatabase,
+  type UserDataKind,
+} from "@/lib/supabase";
 import { isValidEmail, isValidPassword, sanitizeText } from "@/lib/validation";
 import { tr } from "@/i18n/runtime";
 import {
@@ -41,6 +48,25 @@ import {
 
 const STORAGE_KEY = "oskemen-culture-state-v1";
 const STATE_VERSION = 3;
+/**
+ * Разовая миграция старых сохранений: прежние сборки стартовали с
+ * автоматическим входом за демо-аккаунт («Алина Смагулова»). Новый старт
+ * открывает форму входа вместо авто-сессии. Флаг запоминается один раз,
+ * поэтому последующий ручной вход за демо-аккаунт не сбрасывается.
+ */
+const LEGACY_AUTOLOGIN_MIGRATION_KEY = "oskemen-culture-autologin-migration-v1";
+
+/** Первая загрузка новой сборкой localStorage? (разовое выключение авто-сессии). */
+const isFirstRunAfterLegacyAutologin = (): boolean => {
+  if (typeof window === "undefined") return false;
+  try {
+    const migrated = window.localStorage.getItem(LEGACY_AUTOLOGIN_MIGRATION_KEY);
+    if (!migrated) window.localStorage.setItem(LEGACY_AUTOLOGIN_MIGRATION_KEY, "1");
+    return !migrated;
+  } catch {
+    return false;
+  }
+};
 
 interface Account {
   email: string;
@@ -72,6 +98,8 @@ interface StoreState {
   siteSettings: SiteSettings;
   /** Переопределения обложек seed-мест из админки (не касаясь массивов сидов). */
   placeImageOverrides: Record<string, string>;
+  /** Полные правки мест из админки (название, категория, адрес, точка, бюджет и т.д.). */
+  placeEdits: Record<string, Partial<PlaceInput>>;
 }
 
 interface ActionResult {
@@ -132,6 +160,8 @@ interface AppContextValue {
   deletePlace: (placeId: string) => ActionResult;
   /** Замена обложки места (админ-инструмент Шаг 2): dataURL локально или публичный URL из Storage. */
   setPlaceImage: (placeId: string, image: string) => ActionResult;
+  /** Полное редактирование места (админ-инструмент): все поля карточки места. */
+  editPlace: (placeId: string, patch: Partial<PlaceInput>) => ActionResult;
   getUser: (id: string) => User | undefined;
   getRoute: (id: string) => Route | undefined;
   startDraft: (placeIds?: string[], options?: { title?: string; description?: string }) => void;
@@ -171,7 +201,11 @@ const createInitialState = (): StoreState => ({
       userId: "u-admin",
     },
   ],
-  currentUserId: "u-alina",
+  /**
+   * Старт без авторизации: посетитель попадает на форму входа.
+   * Раньше сборка стартовала с автоматическим входом за "u-alina" — отброшено.
+   */
+  currentUserId: null,
   posts: seedPosts,
   customPlaces: [],
   customRoutes: [],
@@ -194,6 +228,7 @@ const createInitialState = (): StoreState => ({
     postingEnabled: true,
   },
   placeImageOverrides: {},
+  placeEdits: {},
 });
 
 const loadState = (): StoreState => {
@@ -203,6 +238,9 @@ const loadState = (): StoreState => {
     if (!raw) return createInitialState();
     const parsed = JSON.parse(raw) as StoreState;
     if (!parsed || parsed.version !== STATE_VERSION) return createInitialState();
+    // Разовая миграция: авто-сессия демо-аккаунта из старых сборок → форма входа.
+    const legacyFirstRun = isFirstRunAfterLegacyAutologin();
+    const storedUserId = parsed.currentUserId ?? null;
     return {
       ...createInitialState(),
       ...parsed,
@@ -218,6 +256,9 @@ const loadState = (): StoreState => {
       draft: parsed.draft ?? null,
       siteSettings: parsed.siteSettings ?? createInitialState().siteSettings,
       placeImageOverrides: parsed.placeImageOverrides ?? {},
+      placeEdits: parsed.placeEdits ?? {},
+      currentUserId:
+        legacyFirstRun && storedUserId === "u-alina" ? null : storedUserId,
     };
   } catch {
     return createInitialState();
@@ -261,6 +302,22 @@ const palette = [
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<StoreState>(loadState);
+  /** Локации из базы данных (public.places) — живут не в localStorage. */
+  const [dbPlaces, setDbPlaces] = useState<Place[]>([]);
+
+  // Карта локаций: подтягиваем места из таблицы public.places, чтобы каталог
+  // и карта работали у любого посетителя (Vercel, другой браузер/устройство),
+  // а не только там, где они сохранены в localStorage.
+  useEffect(() => {
+    if (!supabaseConfigured) return;
+    let cancelled = false;
+    void fetchPlacesFromDatabase().then((rows) => {
+      if (!cancelled && rows.length) setDbPlaces(rows);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Разовая миграция: у легаси-аккаунтов открытый пароль заменяется на salt+hash.
   useEffect(() => {
@@ -316,17 +373,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const places = useMemo(() => {
     const overrides = state.placeImageOverrides;
-    if (!Object.keys(overrides).length) {
-      return [...state.customPlaces, ...seedPlaces.map(localizePlace)];
-    }
-    // Замена фото из админки применяется мгновенно ко всем разделам:
-    // гид, карта, лента и главная получают новую обложку по place.id.
-    return [...state.customPlaces, ...seedPlaces.map((place) => {
-      const localized = localizePlace(place);
-      const override = overrides[localized.id];
-      return override ? { ...localized, image: override } : localized;
-    })];
-  }, [state.customPlaces, state.placeImageOverrides]);
+    const edits = state.placeEdits;
+    // customPlaces и dbPlaces имеют приоритет над сид-каталогом (по id без дублей).
+    const local = [...state.customPlaces, ...dbPlaces];
+    const seen = new Set(local.map((place) => place.id));
+    const remainingSeeds = seedPlaces
+      .filter((place) => !seen.has(place.id))
+      .map(localizePlace);
+    return [...local, ...remainingSeeds].map((place) => {
+      // Правки полей из админки применяются ко всем разделам (гид, карта, лента),
+      // затем обложка-оверрайд (ее админка тоже пишет, поэтому приоритет у edits).
+      const edited = edits[place.id] ? { ...place, ...edits[place.id] } : place;
+      const override = overrides[place.id];
+      return override ? { ...edited, image: override } : edited;
+    });
+  }, [state.customPlaces, dbPlaces, state.placeImageOverrides, state.placeEdits]);
 
   const placeMap = useMemo(
     () =>
@@ -356,6 +417,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     (id: string) => routes.find((route) => route.id === id),
     [routes],
   );
+
+  const isAdmin = currentUser?.role === "admin";
 
   const login = useCallback(async (email: string, password: string): Promise<AuthResult> => {
     const cleanEmail = sanitizeText(email);
@@ -703,6 +766,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ...prev,
         customPlaces: [place, ...prev.customPlaces],
       }));
+      // Дублируем место в public.places, чтобы оно не исчезло на другом
+      // устройстве/браузере (например, при первом запуске на Vercel).
+      void savePlaceToDatabase(place, state.currentUserId ?? undefined);
       return { ok: true, place };
     },
     [state.currentUserId],
@@ -736,6 +802,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           customRoutes,
         };
       });
+      // Место удалено локально и из базы данных, чтобы оно больше не вернулось.
+      void deletePlaceFromDatabase(placeId);
       return { ok: true };
     },
     [state.currentUserId, state.customPlaces],
@@ -947,7 +1015,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setState(createInitialState());
   }, []);
 
-  const isAdmin = currentUser?.role === "admin";
   const onboarded = currentUser ? currentUser.isOnboarded !== false : true;
 
   const approvePost = useCallback((postId: string) => {
@@ -1022,6 +1089,54 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return { ok: true };
   }, []);
 
+  /**
+   * Полное редактирование места из админки: название, категория, район,
+   * адрес, точка на карте, описание, теги, ценник и «с кем хорошо».
+   * • свои (community) места обновляются напрямую;
+   * • сид-места и места из базы — через разовые правки placeEdits;
+   * • при настроенном Supabase изменения дублируются в public.places.
+   */
+  const editPlace = useCallback(
+    (placeId: string, patch: Partial<PlaceInput>): ActionResult => {
+      if (!state.currentUserId) return { ok: false, error: tr("Сначала войдите в аккаунт") };
+      if (!isAdmin) return { ok: false, error: tr("Доступно только администраторам") };
+      if (patch.name !== undefined && patch.name.trim().length < 2) {
+        return { ok: false, error: tr("Название слишком короткое") };
+      }
+      if (patch.coords && !(Number.isFinite(patch.coords[0]) && Number.isFinite(patch.coords[1]))) {
+        return { ok: false, error: tr("Поставьте точку на карте") };
+      }
+      const existing = placeMap[placeId];
+      if (!existing) return { ok: false, error: tr("Место не найдено") };
+      const isCustom = state.customPlaces.some((place) => place.id === placeId);
+
+      if (isCustom) {
+        const updated: Place = { ...existing, ...patch };
+        setState((prev) => ({
+          ...prev,
+          customPlaces: prev.customPlaces.map((place) =>
+            place.id === placeId ? updated : place,
+          ),
+        }));
+        void savePlaceToDatabase(updated, state.currentUserId ?? undefined);
+        return { ok: true };
+      }
+
+      // Сид-места хранятся локализуемыми, поэтому правим оверрайдами.
+      const { image, ...rest } = patch;
+      setState((prev) => ({
+        ...prev,
+        placeEdits: Object.keys(rest).length
+          ? { ...prev.placeEdits, [placeId]: { ...prev.placeEdits[placeId], ...rest } }
+          : prev.placeEdits,
+        placeImageOverrides: image ? { ...prev.placeImageOverrides, [placeId]: image } : prev.placeImageOverrides,
+      }));
+      void savePlaceToDatabase({ ...existing, ...patch }, state.currentUserId ?? undefined);
+      return { ok: true };
+    },
+    [state.currentUserId, state.customPlaces, isAdmin, placeMap],
+  );
+
   const contextValue = useMemo<AppContextValue>(
     () => ({
       users,
@@ -1057,6 +1172,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addPlace,
       deletePlace,
       setPlaceImage,
+      editPlace,
       getUser,
       getRoute,
       startDraft,
@@ -1087,6 +1203,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       currentUser,
       deletePlace,
       setPlaceImage,
+      editPlace,
       onboarded,
       completeOnboarding,
       events,

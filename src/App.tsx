@@ -1,11 +1,11 @@
 import { lazy, Suspense, type ReactNode } from "react";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { OnboardingTour } from "@/components/onboarding/Onboarding";
 import { AppShell } from "@/components/layout/AppShell";
 import { SupabaseSessionSync } from "@/auth/SupabaseSession";
 import { PageLoader } from "@/components/ui/PageLoader";
-import { AppProvider } from "@/context/AppContext";
+import { AppProvider, useApp } from "@/context/AppContext";
 import { LanguageProvider } from "@/i18n/LanguageContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { ToastProvider } from "@/context/ToastContext";
@@ -41,6 +41,17 @@ const RoutesPage = lazy(() => import("@/pages/RoutesPage").then((m) => ({ defaul
 /** Обёртка ленивого маршрута: единый fallback для всех страниц. */
 const route = (page: ReactNode) => <Suspense fallback={<PageLoader />}>{page}</Suspense>;
 
+/**
+ * Гость на главной → форма входа вместо автоматической демо-сессии.
+ * Остальные страницы (карта, гид, лента) остаются доступны без входа.
+ */
+function EntrypointGate({ children }: { children: ReactNode }) {
+  const { currentUser } = useApp();
+  const location = useLocation();
+  if (currentUser) return <>{children}</>;
+  return <Navigate to="/auth" replace state={{ from: location.pathname }} />;
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
@@ -54,7 +65,7 @@ export default function App() {
                   <Routes>
                   <Route path="/auth" element={route(<AuthPage />)} />
                   <Route element={<AppShell />}>
-                    <Route index element={route(<HomePage />)} />
+                    <Route index element={route(<EntrypointGate><HomePage /></EntrypointGate>)} />
                     <Route path="feed" element={route(<FeedPage />)} />
                     <Route path="guide" element={route(<GuidePage />)} />
                     <Route path="map" element={route(<MapPage />)} />

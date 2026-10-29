@@ -1,7 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { demoAccount } from "@/data/users";
 import { useApp } from "@/context/AppContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useToast } from "@/context/ToastContext";
@@ -73,6 +72,7 @@ export function AuthPage() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
+    setBusy(true);
 
     if (mode === "register" && name.trim().length < 2) {
       setError(tr("Укажите имя — хотя бы два символа"));
@@ -94,36 +94,11 @@ export function AuthPage() {
     const result = mode === "login" ? await login(email, password) : await register(name, email, password);
     if (!result.ok) {
       setError(result.error ?? tr("Не удалось выполнить действие"));
+      setBusy(false);
       return;
     }
 
     finish(mode === "login");
-  };
-
-  const handleDemo = async () => {
-    setError("");
-    setBusy(true);
-    const result = await login(demoAccount.email, demoAccount.password);
-    setBusy(false);
-    if (!result.ok) {
-      setError(
-        result.error ?? tr("Профиль недоступен. Попробуйте сбросить данные в настройках профиля."),
-      );
-      return;
-    }
-    track("auth_login", { provider: "demo" });
-    toast({
-      title: tr("Вы вошли"),
-      description: tr("Профиль Алины открыт. Все изменения сохранятся только в этом браузере."),
-    });
-    navigate(target, { replace: true });
-  };
-
-  const fillDemoCredentials = () => {
-    setMode("login");
-    setEmail(demoAccount.email);
-    setPassword(demoAccount.password);
-    setError("");
   };
 
   return (
@@ -365,32 +340,6 @@ export function AuthPage() {
                       : tr("Требуется настроить Supabase (см. VITE_SUPABASE_URL).")}
                   </span>
                 </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleDemo}
-                disabled={busy}
-                className="card flex w-full items-center gap-3 p-3.5 text-left transition-colors hover:border-line-strong hover:bg-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50"
-              >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-ink">
-                  <Icon name="user" size={18} />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-medium text-fg">{tr("Войти в готовый профиль")}</span>
-                  <span className="mt-0.5 block text-meta text-muted">
-                    {tr("Профиль Алины · всё готово к просмотру")}
-                  </span>
-                </span>
-                <Icon name="arrowRight" size={16} className="shrink-0 text-faint" />
-              </button>
-
-              <button
-                type="button"
-                onClick={fillDemoCredentials}
-                className="mt-2.5 w-full text-center text-meta text-faint transition-colors hover:text-fg"
-              >
-                {tr("Быстрый вход в профиль Алины · подставить данные")}
               </button>
 
               {draft || savedRouteIds.length ? (

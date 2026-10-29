@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { tr } from "@/i18n/runtime";
-import type { User as AppUser } from "@/types";
+import type { CategoryId, Companion, Place, PriceLevel, User as AppUser } from "@/types";
 
 /**
  * Необязательный Supabase-клиент.
@@ -145,6 +145,127 @@ export const buildAppUserFromAuthUser = (authUser: SupabaseAuthUser): AppUser =>
     isOnboarded: false,
   };
 };
+
+/* ============================================================
+   Карта локаций из базы данных (таблица public.places).
+   Чтение открыто всем по RLS (places_select_all), поэтому карта
+   загружается у любого посетителя — в том числе на Vercel, где
+   localStorage чистый и локально добавленные точки недоступны.
+   Места сообщества дублируются сюда же, чтобы не «исчезали»
+   при первом запуске на другом устройстве.
+   ============================================================ */
+const PLACE_CATEGORIES: CategoryId[] = ["food", "nature", "entertainment", "culture", "sport", "landmark", "leisure"];
+const PLACE_COMPANIONS: Companion[] = ["solo", "couple", "friends", "family"];
+
+const asPlaceCategory = (value: unknown): CategoryId =>
+  PLACE_CATEGORIES.includes(value as CategoryId) ? (value as CategoryId) : "landmark";
+
+const asCompanions = (value: unknown): Companion[] =>
+  Array.isArray(value)
+    ? value.filter((item): item is Companion => PLACE_COMPANIONS.includes(item as Companion))
+    : [];
+
+const asPriceLevel = (value: unknown): PriceLevel =>
+  (([0, 1, 2, 3].includes(Number(value)) ? Number(value) : 0) as PriceLevel);
+
+/** Строка public.places → Place приложения. Возвращает null у повреждённых строк. */
+function rowToPlace(row: Record<string, unknown>): Place | null {
+  const id = typeof row.id === "string" ? row.id : "";
+  const name = typeof row.name === "string" ? row.name : "";
+  const lat = Number(row.lat);
+  const lng = Number(row.lng);
+  if (!id || !name || !Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  const description = typeof row.description === "string" ? row.description : "";
+  const shortDescription =
+    typeof row.short_description === "string" && row.short_description.trim()
+      ? row.short_description
+      : `${description.slice(0, 92)}${description.length > 92 ? "…" : ""}`;
+  return {
+    id,
+    name,
+    category: asPlaceCategory(row.category),
+    district: typeof row.district === "string" ? row.district : "",
+    address: typeof row.address === "string" ? row.address : "",
+    description,
+    shortDescription,
+    coords: [lat, lng],
+    image:
+      typeof row.image_url === "string" && row.image_url ? row.image_url : "/images/panorama.webp",
+    tags: Array.isArray(row.tags)
+      ? row.tags.filter((tag): tag is string => typeof tag === "string")
+      : [],
+    priceLevel: asPriceLevel(row.price_level),
+    companions: asCompanions(row.companions),
+    source: row.source === "community" ? "community" : "OpenStreetMap",
+    photoCredit: typeof row.photo_credit === "string" ? row.photo_credit : undefined,
+    illustrativePhoto: Boolean(row.illustrative_photo),
+    featured: Boolean(row.featured),
+    createdAt: typeof row.created_at === "string" ? row.created_at : undefined,
+  };
+}
+
+/** Читает локации из таблицы public.places (публичное чтение по RLS). */
+export async function fetchPlacesFromDatabase(): Promise<Place[]> {
+  const client = getSupabaseClient();
+  if (!client) return [];
+  try {
+    const { data, error } = await client.from("places").select("*");
+    if (error || !data) return [];
+    return (data as Record<string, unknown>[])
+      .map(rowToPlace)
+      .filter((place): place is Place => Boolean(place));
+  } catch {
+    // База недоступна — карта остаётся на сид-каталоге и localStorage
+    return [];
+  }
+}
+
+/** Сохраняет место (например, добавленное сообществом) в public.places. Best-effort. */
+export async function savePlaceToDatabase(place: Place, userId?: string): Promise<void> {
+  const client = getSupabaseClient();
+  if (!client) return;
+  const [lat, lng] = place.coords;
+  const row = {
+    id: place.id,
+    name: place.name,
+    category: place.category,
+    district: place.district,
+    address: place.address,
+    description: place.description,
+    short_description: place.shortDescription,
+    lat,
+    lng,
+    image_url: place.image,
+    tags: place.tags,
+    price_level: place.priceLevel,
+    companions: place.companions,
+    source: place.source === "community" ? "community" : "OpenStreetMap",
+    photo_credit: place.photoCredit ?? null,
+    illustrative_photo: Boolean(place.illustrativePhoto),
+  };
+  try {
+    const { error } = await client
+      .from("places")
+      .upsert(userId ? { ...row, created_by: userId } : row);
+    if (error && userId) {
+      // Старая схема без 003_community_places.sql: повтор без created_by.
+      await client.from("places").upsert(row);
+    }
+  } catch {
+    // Сеть/RLS: место остаётся сохранённым локально
+  }
+}
+
+/** Убирает место из public.places (для удалённых участниками). Best-effort. */
+export async function deletePlaceFromDatabase(placeId: string): Promise<void> {
+  const client = getSupabaseClient();
+  if (!client) return;
+  try {
+    await client.from("places").delete().eq("id", placeId);
+  } catch {
+    // Сеть/RLS: локально место уже удалено
+  }
+}
 
 /* Шаг 2: надёжная привязка данных к пользователю (userId по RLS миграции 002). */
 export type UserDataKind = "favorites" | "saved_posts" | "saved_routes" | "saved_events";

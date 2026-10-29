@@ -61,7 +61,6 @@ export function AppShell() {
       </div>
       <MobileNav />
       <DraftBar />
-      <Footer />
       <SearchOverlay open={searchOpen} onClose={closeSearch} />
     </div>
   );
