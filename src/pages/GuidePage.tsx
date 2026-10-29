@@ -10,7 +10,7 @@ import {
 import { useApp } from "@/context/AppContext";
 import { useDelayedReady } from "@/hooks/useDelayedReady";
 import { cn, normalize, pluralizePlaces } from "@/lib/utils";
-import { tr } from "@/i18n/runtime";
+import { localeFor, tr } from "@/i18n/runtime";
 import { CategoryFilter } from "@/components/places/CategoryFilter";
 import { PlaceCard, PlaceCardSkeleton } from "@/components/places/PlaceCard";
 import { PlaceDetail } from "@/components/places/PlaceDetail";
@@ -50,7 +50,7 @@ export function GuidePage() {
   const districts = useMemo(
     () =>
       Array.from(new Set(places.map((place) => place.district))).sort((a, b) =>
-        a.localeCompare(b, "ru"),
+        a.localeCompare(b, localeFor()),
       ),
     [places],
   );
@@ -142,7 +142,7 @@ export function GuidePage() {
     });
 
     if (sort === "name") {
-      return [...result].sort((a, b) => a.name.localeCompare(b.name, "ru"));
+      return [...result].sort((a, b) => a.name.localeCompare(b.name, localeFor()));
     }
     if (sort === "free") {
       return [...result].sort((a, b) => a.priceLevel - b.priceLevel);
@@ -150,7 +150,7 @@ export function GuidePage() {
     return [...result].sort((a, b) => {
       if (a.featured && !b.featured) return -1;
       if (!a.featured && b.featured) return 1;
-      return a.name.localeCompare(b.name, "ru");
+      return a.name.localeCompare(b.name, localeFor());
     });
   }, [category, district, price, companion, onlyFavorites, favorites, query, sort, places]);
 

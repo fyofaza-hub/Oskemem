@@ -12,6 +12,7 @@ import {
   currentLanguage,
   localeFor,
   setRuntimeLanguage,
+  tr,
   type Language,
 } from "@/i18n/runtime";
 
@@ -23,12 +24,20 @@ interface LanguageContextValue {
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
+const TITLE_SOURCE = "Oskemen Culture — открой свой город";
+const DESCRIPTION_SOURCE =
+  "Oskemen Culture — открой свой город. Места, события и маршруты Өскемена в одном пространстве.";
+
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>(currentLanguage);
 
   useEffect(() => {
     document.documentElement.lang = language;
     document.documentElement.dir = "ltr";
+    document.title = tr(TITLE_SOURCE, undefined, language);
+    document
+      .querySelector('meta[name="description"]')
+      ?.setAttribute("content", tr(DESCRIPTION_SOURCE, undefined, language));
   }, [language]);
 
   const setLanguage = useCallback((next: Language) => {

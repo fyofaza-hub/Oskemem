@@ -128,7 +128,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
   return (
     <AnimatePresence>
       {open ? (
-        <div className="fixed inset-0 z-[110] flex justify-center sm:px-6 sm:pt-[10vh]">
+        <div className="fixed inset-0 z-[110] flex justify-center sm:items-start sm:px-6 sm:pt-[10vh]">
           <motion.div
             aria-hidden="true"
             className="absolute inset-0 bg-scrim/55 backdrop-blur-[2px]"

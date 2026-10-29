@@ -191,7 +191,7 @@ export function PlanPage() {
     setReplaceOpen(false);
     toast({
       title: tr("Маршрут собран"),
-      description: `${pluralizeStops(selectedIds.length)} · проверьте порядок и время.`,
+      description: `${pluralizeStops(selectedIds.length)} · ${tr("проверьте порядок и время.")}`,
       variant: "success",
     });
   };

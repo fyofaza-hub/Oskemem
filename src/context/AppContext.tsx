@@ -743,7 +743,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const copy: Route = {
         ...source,
         id: uid("route"),
-        title: `${source.title} · моя версия`,
+        title: `${source.title} · ${tr("моя версия")}`,
         authorId: state.currentUserId,
         savedBy: [state.currentUserId],
         createdAt: new Date().toISOString(),

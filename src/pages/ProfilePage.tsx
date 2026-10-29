@@ -1,37 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import {
-  ArrowRight,
-  Bookmark,
-  CalendarDays,
-  Camera,
-  Check,
-  Compass,
-  Heart,
-  LogOut,
-  MapPin,
-  Pencil,
-  Plus,
-  RefreshCcw,
-  Route as RouteIcon,
-  Settings2,
-  UserRound,
-  Users,
-} from "lucide-react";
 import type { CategoryId, CityEvent, Place, Post } from "@/types";
 import { categoryMap, categories } from "@/data/categories";
 import { useApp } from "@/context/AppContext";
 import { useToast } from "@/context/ToastContext";
 import {
   compressImage,
-  fileToDataUrl,
-  formatDate,
-  normalize,
+  formatJoinedDate,
   pluralizePlaces,
   validateImageFile,
 } from "@/lib/utils";
+import { tr } from "@/i18n/runtime";
 import { Avatar } from "@/components/ui/Avatar";
+import { Button, ButtonLink, IconButton } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/Bits";
+import { Field, Input, Textarea } from "@/components/ui/Field";
+import { Icon, type IconName } from "@/components/ui/Icon";
+import { CategoryIcon } from "@/components/ui/Category";
 import { Modal } from "@/components/ui/Modal";
 import { PostCard } from "@/components/feed/PostCard";
 import { PostDetailModal } from "@/components/feed/PostDetailModal";
@@ -40,17 +25,15 @@ import { PlaceDetail } from "@/components/places/PlaceDetail";
 import { RouteCard } from "@/components/routes/RouteCard";
 import { EventCard } from "@/components/events/EventCard";
 import { EventDetailModal } from "@/components/events/EventDetailModal";
-import { CategoryIcon } from "@/components/ui/Category";
-import { tr } from "@/i18n/runtime";
 
 type ProfileTab = "posts" | "routes" | "favorites" | "saved" | "settings";
 
-const tabs: Array<{ id: ProfileTab; label: string; icon: typeof UserRound }> = [
-  { id: "posts", label: tr("Публикации"), icon: UserRound },
-  { id: "routes", label: tr("Маршруты"), icon: RouteIcon },
-  { id: "favorites", label: tr("Избранное"), icon: Heart },
-  { id: "saved", label: tr("Сохранённое"), icon: Bookmark },
-  { id: "settings", label: tr("Настройки"), icon: Settings2 },
+const tabs: Array<{ id: ProfileTab; label: string; icon: IconName }> = [
+  { id: "posts", label: tr("Публикации"), icon: "feed" },
+  { id: "routes", label: tr("Маршруты"), icon: "routes" },
+  { id: "favorites", label: tr("Избранное"), icon: "heart" },
+  { id: "saved", label: tr("Сохранённое"), icon: "bookmark" },
+  { id: "settings", label: tr("Настройки"), icon: "settings" },
 ];
 
 const avatarColors = [
@@ -142,20 +125,25 @@ export function ProfilePage() {
   if (!currentUser) {
     return (
       <div className="page-wrap">
-        <div className="mx-auto max-w-xl rounded-[28px] border border-white/9 bg-surface p-7 text-center sm:p-10">
-          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-accent/25 bg-accent/10 text-accent">
-            <UserRound size={24} strokeWidth={1.5} />
-          </span>
-          <p className="eyebrow mt-5">{tr("профиль")}</p>
-          <h1 className="mt-2 font-display text-3xl font-light tracking-[-0.04em] text-primary">
-            {tr(" Войдите, чтобы собрать свой город ")}</h1>
-          <p className="mx-auto mt-3 max-w-sm text-[12px] leading-relaxed text-white/40">
-            {tr(" Избранные места, сохранённые маршруты, комментарии и публикации привязаны к аккаунту в этом браузере. Вход занимает одно нажатие. ")}</p>
-          <div className="mt-6 flex flex-wrap justify-center gap-2">
-            <Link to="/auth?from=/profile" className="btn btn-primary btn-md">
-              {tr(" Войти в аккаунт ")}</Link>
-            <Link to="/guide" className="btn btn-secondary btn-md">
-              {tr(" Сначала посмотреть гид ")}</Link>
+        <div className="mx-auto max-w-xl">
+          <div className="card p-7 text-center sm:p-10">
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-accent-soft text-accent-ink">
+              <Icon name="user" size={24} />
+            </span>
+            <h1 className="mt-5 font-display text-2xl font-semibold tracking-[-0.02em] text-fg sm:text-3xl">
+              {tr("Войдите, чтобы собрать свой город")}
+            </h1>
+            <p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-muted">
+              {tr("Избранные места, сохранённые маршруты, комментарии и публикации привязаны к аккаунту в этом браузере. Вход занимает одно нажатие.")}
+            </p>
+            <div className="mt-6 flex flex-wrap justify-center gap-2">
+              <ButtonLink to="/auth?from=/profile" variant="primary" icon="user">
+                {tr("Войти в аккаунт")}
+              </ButtonLink>
+              <ButtonLink to="/guide" variant="secondary" icon="guide">
+                {tr("Сначала посмотреть гид")}
+              </ButtonLink>
+            </div>
           </div>
         </div>
       </div>
@@ -194,140 +182,118 @@ export function ProfilePage() {
     }
   };
 
-  const copyCountLabel = (count: number, one: string, few: string, many: string) => {
-    const n = Math.abs(count) % 100;
-    const n1 = n % 10;
-    if (n > 10 && n < 20) return many;
-    if (n1 > 1 && n1 < 5) return few;
-    if (n1 === 1) return one;
-    return many;
-  };
+  const tabCount = (id: ProfileTab) =>
+    id === "posts"
+      ? myPosts.length
+      : id === "routes"
+        ? myRoutes.length
+        : id === "favorites"
+          ? favorites.length
+          : id === "saved"
+            ? savedTotal
+            : undefined;
 
   return (
     <div className="page-wrap">
-      <section className="overflow-hidden rounded-[28px] border border-white/9 bg-surface">
-        <div className="on-media relative h-[180px] overflow-hidden sm:h-[220px]">
-          <img src="/images/panorama.webp" alt="" className="h-full w-full object-cover opacity-45" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0b0e13] via-[#0b0e13]/40 to-black/20" />
-          <div className="absolute right-4 top-4 flex items-center gap-2">
-            <span className="hidden h-8 items-center gap-1.5 rounded-full border border-white/15 bg-black/35 px-3 font-mono text-[8px] uppercase tracking-[0.1em] text-white/55 backdrop-blur-md sm:flex">
-              <span className="h-1 w-1 rounded-full bg-emerald-300/70" />
-              {tr(" профиль сообщества ")}</span>
-            <button
-              type="button"
-              onClick={() => setTab("settings")}
-              className="flex h-8 items-center gap-1.5 rounded-full border border-white/15 bg-black/35 px-3 text-[10px] text-white/65 backdrop-blur-md transition-colors hover:bg-black/55 hover:text-white"
-            >
-              <Pencil size={11} /> {tr(" Редактировать ")}</button>
+      <section className="card overflow-hidden">
+        <div className="relative h-28 overflow-hidden bg-sunken sm:h-36">
+          <img src="/images/panorama.webp" alt="" className="h-full w-full object-cover opacity-60" />
+          <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/25 to-transparent" />
+          <div className="absolute right-3 top-3 flex items-center gap-2">
+            <span className="badge bg-surface/95 text-fg shadow-card">
+              <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+              {tr("профиль сообщества")}
+            </span>
+            <Button variant="secondary" size="sm" icon="edit" onClick={() => setTab("settings")}>
+              {tr("Редактировать")}
+            </Button>
           </div>
-          <div className="absolute bottom-4 right-5 font-mono text-[8px] uppercase tracking-[0.16em] text-white/30">
-            {tr(" Өскемен · Казахстан ")}</div>
         </div>
 
         <div className="relative px-5 pb-5 sm:px-7 sm:pb-6">
-          <div className="-mt-12 flex flex-col gap-5 sm:-mt-14 sm:flex-row sm:items-end sm:justify-between">
+          <div className="-mt-11 flex flex-col gap-4 sm:-mt-14 sm:flex-row sm:items-end sm:justify-between">
             <div className="flex items-end gap-4">
               <div className="relative">
                 <Avatar
                   user={{ ...currentUser, avatar, avatarColor }}
                   size="2xl"
-                  className="border-4 border-card shadow-[0_18px_50px_rgba(0,0,0,0.4)]"
+                  className="border-4 border-surface shadow-card"
                 />
-                <span className="absolute bottom-1 right-1 h-3.5 w-3.5 rounded-full border-2 border-card bg-emerald-300" />
+                <span className="absolute bottom-1 right-1 h-3.5 w-3.5 rounded-full border-2 border-surface bg-accent" />
               </div>
-              <div className="pb-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="font-display text-[26px] font-light leading-none tracking-[-0.04em] text-primary sm:text-[32px]">
-                    {currentUser.name}
-                  </h1>
-                </div>
-                <p className="mt-1.5 font-mono text-[9px] uppercase tracking-[0.12em] text-white/30">
-                  @{currentUser.username}
-                </p>
+              <div className="min-w-0 pb-1">
+                <h1 className="truncate font-display text-[24px] font-semibold leading-tight tracking-[-0.02em] text-fg sm:text-[30px]">
+                  {currentUser.name}
+                </h1>
+                <p className="mt-1 text-sm text-muted">@{currentUser.username}</p>
               </div>
             </div>
             <div className="flex flex-wrap gap-2 sm:pb-1">
-              <Link to="/routes/new" className="btn btn-primary btn-sm gap-1.5">
-                <Plus size={13} /> {tr(" Новый маршрут ")}</Link>
-              <button
-                type="button"
-                onClick={() => setTab("settings")}
-                className="btn btn-secondary btn-sm gap-1.5"
-              >
-                <Settings2 size={13} /> {tr(" Настройки ")}</button>
+              <ButtonLink to="/routes/new" variant="primary" size="sm" icon="plus">
+                {tr("Новый маршрут")}
+              </ButtonLink>
+              <Button variant="secondary" size="sm" icon="settings" onClick={() => setTab("settings")}>
+                {tr("Настройки")}
+              </Button>
             </div>
           </div>
 
-          <p className="mt-4 max-w-xl text-[12px] leading-relaxed text-white/50">{currentUser.bio}</p>
-          <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[10px] text-white/30">
+          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted">{currentUser.bio}</p>
+          <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-meta text-muted">
             <span className="flex items-center gap-1.5">
-              <MapPin size={10} /> {currentUser.city}
+              <Icon name="location" size={14} /> {currentUser.city}
             </span>
             <span className="flex items-center gap-1.5">
-              <CalendarDays size={10} /> {tr(" с")}{" "}
-              {formatDate(currentUser.joinedAt, { month: "long", year: "numeric" })}
+              <Icon name="calendarDays" size={14} />
+              {formatJoinedDate(currentUser.joinedAt)}
             </span>
             {currentUser.interests.length ? (
               <span className="flex items-center gap-1.5">
-                <Compass size={10} />{" "}
+                <Icon name="heart" size={14} />
                 {currentUser.interests.map((id) => categoryMap[id].shortLabel).join(" · ")}
               </span>
             ) : null}
           </div>
 
-          <div className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-white/8 bg-white/8 sm:grid-cols-4">
+          <div className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-4">
             {[
               { value: myPosts.length, label: tr("публикаций") },
               { value: myRoutes.length, label: tr("маршрутов") },
               { value: favorites.length, label: tr("в избранном") },
               { value: savedTotal, label: tr("сохранено") },
             ].map((stat) => (
-              <div key={stat.label} className="bg-elevated px-4 py-3.5">
-                <p className="font-display text-[22px] font-light text-primary">{stat.value}</p>
-                <p className="mt-0.5 font-mono text-[8px] uppercase tracking-[0.1em] text-white/25">
-                  {stat.label}
-                </p>
+              <div key={stat.label} className="bg-surface px-4 py-3">
+                <p className="font-display text-xl font-semibold text-fg">{stat.value}</p>
+                <p className="mt-0.5 text-meta text-muted">{stat.label}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <div className="mt-5 overflow-hidden rounded-2xl border border-white/8 bg-surface">
-        <div className="no-scrollbar flex overflow-x-auto border-b border-white/8">
+      <div className="card mt-5 overflow-hidden">
+        <div className="no-scrollbar flex overflow-x-auto border-b border-line" role="tablist" aria-label={tr("Разделы профиля")}>
           {tabs.map((tab) => {
-            const count =
-              tab.id === "posts"
-                ? myPosts.length
-                : tab.id === "routes"
-                  ? myRoutes.length
-                  : tab.id === "favorites"
-                    ? favorites.length
-                    : tab.id === "saved"
-                      ? savedTotal
-                      : undefined;
+            const count = tabCount(tab.id);
+            const active = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
                 type="button"
+                role="tab"
+                aria-selected={active}
                 onClick={() => setTab(tab.id)}
-                className={`relative flex h-12 shrink-0 items-center gap-2 px-4 text-[11.5px] transition-colors sm:px-5 ${
-                  activeTab === tab.id ? "text-primary" : "text-white/35 hover:text-white/70"
+                className={`relative flex h-12 shrink-0 items-center gap-2 px-4 text-sm font-medium transition-colors sm:px-5 ${
+                  active ? "text-fg" : "text-muted hover:text-fg"
                 }`}
               >
-                <tab.icon size={14} strokeWidth={activeTab === tab.id ? 2 : 1.5} />
+                <Icon name={tab.icon} size={16} />
                 {tab.label}
                 {count !== undefined ? (
-                  <span
-                    className={`font-mono text-[8px] ${
-                      activeTab === tab.id ? "text-accent" : "text-white/20"
-                    }`}
-                  >
-                    {count}
-                  </span>
+                  <span className={active ? "text-meta text-accent-ink" : "text-meta text-faint"}>{count}</span>
                 ) : null}
-                {activeTab === tab.id ? (
-                  <span className="absolute inset-x-4 bottom-0 h-[2px] rounded-full bg-accent shadow-[0_0_10px_rgba(77,141,255,0.7)]" />
+                {active ? (
+                  <span className="absolute inset-x-4 bottom-0 h-0.5 rounded-full bg-accent" />
                 ) : null}
               </button>
             );
@@ -344,12 +310,13 @@ export function ProfilePage() {
               </div>
             ) : (
               <EmptyState
-                icon={Pencil}
+                icon="edit"
                 title={tr("Здесь будут ваши публикации")}
                 description={tr("Расскажите об одном месте так, как умеете только вы. Публикация появится в ленте, здесь и в избранном читателей.")}
                 action={
-                  <Link to="/feed?create=1" className="btn btn-primary btn-sm gap-1.5">
-                    <Plus size={12} /> {tr(" Создать публикацию ")}</Link>
+                  <ButtonLink to="/feed?create=1" variant="primary" icon="plus">
+                    {tr("Создать публикацию")}
+                  </ButtonLink>
                 }
               />
             )
@@ -364,12 +331,13 @@ export function ProfilePage() {
               </div>
             ) : (
               <EmptyState
-                icon={RouteIcon}
+                icon="routes"
                 title={tr("Маршруты пока не собраны")}
                 description={tr("Добавьте два места, расставьте порядок и время. Мы сохраним маршрут, покажем его на карте и дадим ссылку.")}
                 action={
-                  <Link to="/routes/new" className="btn btn-primary btn-sm gap-1.5">
-                    <Plus size={12} /> {tr(" Собрать маршрут ")}</Link>
+                  <ButtonLink to="/routes/new" variant="primary" icon="plus">
+                    {tr("Собрать маршрут")}
+                  </ButtonLink>
                 }
               />
             )
@@ -379,13 +347,12 @@ export function ProfilePage() {
             favoritePlaces.length ? (
               <>
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-[11px] text-white/35">
-                    {pluralizePlaces(favoritePlaces.length)} {tr(" · сохраняются локально ")}</p>
-                  <Link
-                    to="/map"
-                    className="flex items-center gap-1.5 text-[10px] text-accent transition-opacity hover:opacity-70"
-                  >
-                    <MapPin size={10} /> {tr(" Показать на карте ")}</Link>
+                  <p className="text-sm text-muted">
+                    {pluralizePlaces(favoritePlaces.length)} · {tr("сохраняются локально")}
+                  </p>
+                  <ButtonLink to="/map" variant="ghost" size="sm" icon="map">
+                    {tr("Показать на карте")}
+                  </ButtonLink>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   {favoritePlaces.map((place) => (
@@ -395,12 +362,13 @@ export function ProfilePage() {
               </>
             ) : (
               <EmptyState
-                icon={Heart}
+                icon="heart"
                 title={tr("Избранное пока пустое")}
                 description={tr("Нажимайте на сердечко у мест в гиде, чтобы вернуться к ним позже. Избранное видно только вам.")}
                 action={
-                  <Link to="/guide" className="btn btn-primary btn-sm gap-1.5">
-                    <Compass size={12} /> {tr(" Открыть гид ")}</Link>
+                  <ButtonLink to="/guide" variant="primary" icon="guide">
+                    {tr("Открыть гид")}
+                  </ButtonLink>
                 }
               />
             )
@@ -411,12 +379,15 @@ export function ProfilePage() {
               <div className="space-y-8">
                 {savedPosts.length ? (
                   <section>
-                    <div className="mb-3 flex items-center justify-between border-b border-white/8 pb-2">
-                      <p className="flex items-center gap-2 text-[11.5px] text-white/60">
-                        <Bookmark size={12} className="text-accent" /> {tr(" Публикации ")}<span className="font-mono text-[9px] text-white/25">{savedPosts.length}</span>
+                    <div className="mb-3 flex items-center justify-between border-b border-line pb-2">
+                      <p className="flex items-center gap-2 text-sm font-medium text-fg">
+                        <Icon name="bookmark" size={15} className="text-accent-ink" />
+                        {tr("Публикации")}
+                        <span className="text-faint">{savedPosts.length}</span>
                       </p>
-                      <Link to="/feed" className="text-[9.5px] text-white/25 hover:text-white">
-                        {tr(" в ленту → ")}</Link>
+                      <ButtonLink to="/feed" variant="ghost" size="sm" iconRight="arrowRight">
+                        {tr("В ленту")}
+                      </ButtonLink>
                     </div>
                     <div className="grid gap-3 lg:grid-cols-2">
                       {savedPosts.map((post) => (
@@ -428,12 +399,15 @@ export function ProfilePage() {
 
                 {savedRoutes.length ? (
                   <section>
-                    <div className="mb-3 flex items-center justify-between border-b border-white/8 pb-2">
-                      <p className="flex items-center gap-2 text-[11.5px] text-white/60">
-                        <Bookmark size={12} className="text-accent" /> {tr(" Маршруты ")}<span className="font-mono text-[9px] text-white/25">{savedRoutes.length}</span>
+                    <div className="mb-3 flex items-center justify-between border-b border-line pb-2">
+                      <p className="flex items-center gap-2 text-sm font-medium text-fg">
+                        <Icon name="bookmark" size={15} className="text-accent-ink" />
+                        {tr("Маршруты")}
+                        <span className="text-faint">{savedRoutes.length}</span>
                       </p>
-                      <Link to="/routes" className="text-[9.5px] text-white/25 hover:text-white">
-                        {tr(" все маршруты → ")}</Link>
+                      <ButtonLink to="/routes" variant="ghost" size="sm" iconRight="arrowRight">
+                        {tr("Все маршруты")}
+                      </ButtonLink>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
                       {savedRoutes.map((route) => (
@@ -445,12 +419,15 @@ export function ProfilePage() {
 
                 {savedEvents.length ? (
                   <section>
-                    <div className="mb-3 flex items-center justify-between border-b border-white/8 pb-2">
-                      <p className="flex items-center gap-2 text-[11.5px] text-white/60">
-                        <Bookmark size={12} className="text-accent" /> {tr(" События ")}<span className="font-mono text-[9px] text-white/25">{savedEvents.length}</span>
+                    <div className="mb-3 flex items-center justify-between border-b border-line pb-2">
+                      <p className="flex items-center gap-2 text-sm font-medium text-fg">
+                        <Icon name="bookmark" size={15} className="text-accent-ink" />
+                        {tr("События")}
+                        <span className="text-faint">{savedEvents.length}</span>
                       </p>
-                      <Link to="/events" className="text-[9.5px] text-white/25 hover:text-white">
-                        {tr(" вся афиша → ")}</Link>
+                      <ButtonLink to="/events" variant="ghost" size="sm" iconRight="arrowRight">
+                        {tr("Вся афиша")}
+                      </ButtonLink>
                     </div>
                     <div className="grid gap-2.5 sm:grid-cols-2">
                       {savedEvents.map((event) => (
@@ -462,15 +439,17 @@ export function ProfilePage() {
               </div>
             ) : (
               <EmptyState
-                icon={Bookmark}
+                icon="bookmark"
                 title={tr("Сохранённое пока пустое")}
                 description={tr("Сохраняйте публикации, маршруты и события закладкой — всё соберётся здесь, в одном месте.")}
                 action={
                   <div className="flex flex-wrap justify-center gap-2">
-                    <Link to="/feed" className="btn btn-secondary btn-sm">
-                      {tr(" Смотреть ленту ")}</Link>
-                    <Link to="/events" className="btn btn-primary btn-sm">
-                      {tr(" Открыть афишу ")}</Link>
+                    <ButtonLink to="/feed" variant="secondary">
+                      {tr("Смотреть ленту")}
+                    </ButtonLink>
+                    <ButtonLink to="/events" variant="primary">
+                      {tr("Открыть афишу")}
+                    </ButtonLink>
                   </div>
                 }
               />
@@ -479,30 +458,29 @@ export function ProfilePage() {
 
           {activeTab === "settings" ? (
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
-              <div>
-                <div className="flex items-end justify-between">
-                  <div>
-                    <p className="eyebrow">{tr("редактирование")}</p>
-                    <h2 className="mt-2 font-display text-2xl font-light tracking-[-0.03em] text-primary">
-                      {tr(" Ваш профиль ")}</h2>
-                  </div>
+              <div className="min-w-0">
+                <div>
+                  <h2 className="section-title">{tr("Ваш профиль")}</h2>
+                  <p className="mt-1 text-sm text-muted">
+                    {tr("Имя, город и интересы видны в публикациях и маршрутах.")}
+                  </p>
                 </div>
 
                 <div className="mt-5 flex flex-col gap-5 sm:flex-row sm:items-center">
-                  <div className="relative">
+                  <div className="relative w-fit">
                     <Avatar
                       user={{ ...currentUser, avatar, avatarColor }}
                       size="xl"
-                      className="border-2 border-white/10"
+                      className="border-2 border-line"
                     />
-                    <button
-                      type="button"
+                    <IconButton
+                      icon="camera"
+                      label={tr("Загрузить фото профиля")}
+                      size="sm"
+                      variant="bordered"
                       onClick={() => fileRef.current?.click()}
-                      className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border border-card bg-primary text-app transition-transform hover:scale-105"
-                      aria-label={tr("Загрузить фото профиля")}
-                    >
-                      <Camera size={12} />
-                    </button>
+                      className="absolute -bottom-1 -right-1 rounded-full shadow-card"
+                    />
                     <input
                       ref={fileRef}
                       type="file"
@@ -519,75 +497,61 @@ export function ProfilePage() {
                           key={color}
                           type="button"
                           onClick={() => setAvatarColor(color)}
-                          className={`h-7 w-7 rounded-full border-2 transition-transform hover:scale-110 ${
-                            avatarColor === color ? "border-white" : "border-transparent"
+                          className={`h-8 w-8 rounded-full border-2 transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface ${
+                            avatarColor === color ? "border-fg" : "border-transparent"
                           }`}
                           style={{ background: color }}
                           aria-label={tr("Выбрать цвет аватара")}
+                          aria-pressed={avatarColor === color}
                         />
                       ))}
                     </div>
-                    <p className="mt-2 text-[9px] text-white/25">
-                      {tr(" Фото сжимается локально. Можно обойтись цветным аватаром. ")}</p>
+                    <p className="mt-2 text-meta text-muted">
+                      {tr("Фото сжимается локально. Можно обойтись цветным аватаром.")}
+                    </p>
                   </div>
                 </div>
 
                 <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label className="field-label" htmlFor="profile-name">
-                      {tr(" Имя ")}</label>
-                    <input
+                  <Field id="profile-name" label={tr("Имя")}>
+                    <Input
                       id="profile-name"
                       value={name}
                       onChange={(event) => setName(event.target.value)}
                       maxLength={50}
-                      className="field"
+                      autoComplete="name"
                     />
-                  </div>
-                  <div>
-                    <label className="field-label" htmlFor="profile-username">
-                      Username
-                    </label>
-                    <div className="relative">
-                      <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-white/25">
-                        @
-                      </span>
-                      <input
-                        id="profile-username"
-                        value={username}
-                        onChange={(event) => setUsername(event.target.value)}
-                        maxLength={24}
-                        className="field pl-8"
-                      />
-                    </div>
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="field-label" htmlFor="profile-city">
-                      {tr(" Город ")}</label>
-                    <input
+                  </Field>
+                  <Field id="profile-username" label="Username">
+                    <Input
+                      id="profile-username"
+                      value={username}
+                      onChange={(event) => setUsername(event.target.value)}
+                      maxLength={24}
+                      leadingIcon="user"
+                      autoComplete="username"
+                    />
+                  </Field>
+                  <Field id="profile-city" label={tr("Город")} className="sm:col-span-2">
+                    <Input
                       id="profile-city"
                       value={city}
                       onChange={(event) => setCity(event.target.value)}
                       maxLength={40}
-                      className="field"
+                      leadingIcon="location"
                     />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="field-label" htmlFor="profile-bio">
-                      {tr(" О себе ")}</label>
-                    <textarea
+                  </Field>
+                  <Field id="profile-bio" label={tr("О себе")} className="sm:col-span-2">
+                    <Textarea
                       id="profile-bio"
                       value={bio}
                       onChange={(event) => setBio(event.target.value)}
                       rows={4}
                       maxLength={220}
-                      className="field resize-none leading-relaxed"
                       placeholder={tr("Что вы любите в городе и какие места ищете?")}
                     />
-                    <p className="mt-1 text-right font-mono text-[8px] text-white/20">
-                      {bio.length}/220
-                    </p>
-                  </div>
+                    <p className="mt-1 text-right text-[11px] tabular-nums text-faint">{bio.length}/220</p>
+                  </Field>
                 </div>
 
                 <div className="mt-5">
@@ -604,11 +568,12 @@ export function ProfilePage() {
                               active ? prev.filter((id) => id !== category.id) : [...prev, category.id],
                             )
                           }
+                          aria-pressed={active}
                           className={`chip ${active ? "chip-active" : ""}`}
                         >
-                          <CategoryIcon category={category.id} size={12} />
+                          <CategoryIcon category={category.id} size={14} />
                           {category.shortLabel}
-                          {active ? <Check size={10} /> : null}
+                          {active ? <Icon name="check" size={12} /> : null}
                         </button>
                       );
                     })}
@@ -616,75 +581,72 @@ export function ProfilePage() {
                 </div>
 
                 <div className="mt-6 flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="btn btn-primary btn-md gap-2"
-                  >
-                    <Check size={14} /> {saving ? tr("Сохраняем…") : tr("Сохранить изменения")}
-                  </button>
-                  <button type="button" onClick={() => setTab("posts")} className="btn btn-secondary btn-md">
-                    {tr(" Отмена ")}</button>
+                  <Button variant="primary" icon="check" onClick={handleSave} loading={saving}>
+                    {saving ? tr("Сохраняем…") : tr("Сохранить изменения")}
+                  </Button>
+                  <Button variant="secondary" onClick={() => setTab("posts")}>
+                    {tr("Отмена")}
+                  </Button>
                 </div>
-                <p className="mt-3 flex items-center gap-1.5 text-[9px] text-white/25">
-                  <span className="h-1 w-1 rounded-full bg-emerald-300/60" />
-                  {tr(" Данные профиля хранятся в этом браузере и не отправляются на сервер. ")}</p>
+                <p className="mt-3 flex items-center gap-1.5 text-meta text-muted">
+                  <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+                  {tr("Данные профиля хранятся в этом браузере и не отправляются на сервер.")}
+                </p>
               </div>
 
               <aside className="space-y-3">
-                <div className="rounded-2xl border border-white/8 bg-white/[0.022] p-4">
-                  <p className="eyebrow">{tr("аккаунт")}</p>
-                  <div className="mt-3 space-y-2.5">
-                    <div className="flex items-center justify-between text-[10px]">
-                      <span className="text-white/30">{tr("Почта")}</span>
-                      <span className="text-white/60">{currentUser.email ?? tr("не указана")}</span>
+                <div className="card p-5">
+                  <h2 className="text-sm font-semibold text-fg">{tr("Аккаунт")}</h2>
+                  <dl className="mt-3 space-y-3">
+                    <div className="flex items-center justify-between gap-3 text-sm">
+                      <dt className="text-muted">{tr("Почта")}</dt>
+                      <dd className="truncate font-medium text-fg">{currentUser.email ?? tr("не указана")}</dd>
                     </div>
-                    <div className="flex items-center justify-between text-[10px]">
-                      <span className="text-white/30">{tr("Публикаций")}</span>
-                      <span className="text-white/60">{myPosts.length}</span>
+                    <div className="flex items-center justify-between gap-3 text-sm">
+                      <dt className="text-muted">{tr("Публикаций")}</dt>
+                      <dd className="font-medium text-fg">{myPosts.length}</dd>
                     </div>
-                    <div className="flex items-center justify-between text-[10px]">
-                      <span className="text-white/30">{tr("Маршрутов")}</span>
-                      <span className="text-white/60">{myRoutes.length}</span>
+                    <div className="flex items-center justify-between gap-3 text-sm">
+                      <dt className="text-muted">{tr("Маршрутов")}</dt>
+                      <dd className="font-medium text-fg">{myRoutes.length}</dd>
                     </div>
-                    <div className="flex items-center justify-between text-[10px]">
-                      <span className="text-white/30">{tr("В сообществе")}</span>
-                      <span className="text-white/60">{users.length} {tr(" профилей")}</span>
+                    <div className="flex items-center justify-between gap-3 border-t border-line pt-3 text-sm">
+                      <dt className="text-muted">{tr("В сообществе")}</dt>
+                      <dd className="font-medium text-fg">
+                        {users.length} {tr("профилей")}
+                      </dd>
                     </div>
-                  </div>
+                  </dl>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => setResetOpen(true)}
-                  className="flex w-full items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.018] px-4 py-3 text-left transition-colors hover:border-white/15 hover:bg-white/[0.035]"
+                  className="card flex w-full items-center gap-3 p-3.5 text-left transition-colors hover:border-line-strong hover:bg-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 >
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 text-white/40">
-                    <RefreshCcw size={14} />
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sunken text-muted">
+                    <Icon name="refresh" size={16} />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[10.5px] text-white/60">{tr("Сбросить данные")}</span>
-                    <span className="mt-0.5 block text-[9px] text-white/25">
-                      {tr(" вернуть исходные данные ")}</span>
+                    <span className="block text-sm font-medium text-fg">{tr("Сбросить данные")}</span>
+                    <span className="mt-0.5 block text-meta text-muted">{tr("вернуть исходные данные")}</span>
                   </span>
-                  <ArrowRight size={12} className="text-white/20" />
+                  <Icon name="chevronRight" size={15} className="shrink-0 text-faint" />
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setLogoutOpen(true)}
-                  className="flex w-full items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.018] px-4 py-3 text-left transition-colors hover:border-red-400/20 hover:bg-red-500/[0.04]"
+                  className="card flex w-full items-center gap-3 p-3.5 text-left transition-colors hover:border-danger/30 hover:bg-danger-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 >
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 text-white/40">
-                    <LogOut size={14} />
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-danger-soft text-danger-ink">
+                    <Icon name="logout" size={16} />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[10.5px] text-white/60">{tr("Выйти из профиля")}</span>
-                    <span className="mt-0.5 block text-[9px] text-white/25">
-                      {tr(" вернуться на экран входа ")}</span>
+                    <span className="block text-sm font-medium text-fg">{tr("Выйти из профиля")}</span>
+                    <span className="mt-0.5 block text-meta text-muted">{tr("вернуться на экран входа")}</span>
                   </span>
-                  <ArrowRight size={12} className="text-white/20" />
+                  <Icon name="chevronRight" size={15} className="shrink-0 text-faint" />
                 </button>
               </aside>
             </div>
@@ -692,9 +654,10 @@ export function ProfilePage() {
         </div>
       </div>
 
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-white/8 pt-4 text-[9px] text-white/25">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-meta text-faint">
         <span className="flex items-center gap-2">
-          <Users size={10} /> {tr(" Профили и публикации — часть городского сообщества ")}</span>
+          <Icon name="users" size={14} /> {tr("Профили и публикации — часть городского сообщества")}
+        </span>
         <span>{tr("Данные не отправляются на сервер")}</span>
       </div>
 
@@ -704,48 +667,51 @@ export function ProfilePage() {
 
       <Modal open={resetOpen} onClose={() => setResetOpen(false)} title={tr("Сбросить данные?")} size="sm">
         <div className="p-5">
-          <p className="text-[12px] leading-relaxed text-white/50">
-            {tr(" Вернутся исходные публикации, маршруты, избранное и профиль Алины. Ваши созданные записи и загруженные фото будут удалены. ")}</p>
+          <p className="text-sm leading-relaxed text-muted">
+            {tr("Вернутся исходные публикации, маршруты, избранное и профиль Алины. Ваши созданные записи и загруженные фото будут удалены.")}
+          </p>
           <div className="mt-5 flex gap-2">
-            <button type="button" onClick={() => setResetOpen(false)} className="btn btn-secondary btn-sm flex-1">
-              {tr(" Отмена ")}</button>
-            <button
-              type="button"
+            <Button variant="secondary" fullWidth onClick={() => setResetOpen(false)}>
+              {tr("Отмена")}
+            </Button>
+            <Button
+              variant="danger"
+              fullWidth
               onClick={() => {
                 resetDemo();
                 setResetOpen(false);
                 setTab("posts");
                 toast({ title: tr("Данные сброшены"), description: tr("Снова открыт профиль Алины.") });
               }}
-              className="btn btn-sm flex-1 bg-red-500/15 text-red-200 hover:bg-red-500/25"
             >
-              {tr(" Сбросить ")}</button>
+              {tr("Сбросить")}
+            </Button>
           </div>
         </div>
       </Modal>
 
       <Modal open={logoutOpen} onClose={() => setLogoutOpen(false)} title={tr("Выйти из профиля?")} size="sm">
         <div className="p-5">
-          <p className="text-[12px] leading-relaxed text-white/50">
-            {tr(" Избранное и черновики останутся в браузере и вернутся после следующего входа. ")}</p>
+          <p className="text-sm leading-relaxed text-muted">
+            {tr("Избранное и черновики останутся в браузере и вернутся после следующего входа.")}
+          </p>
           <div className="mt-5 flex gap-2">
-            <button
-              type="button"
-              onClick={() => setLogoutOpen(false)}
-              className="btn btn-secondary btn-sm flex-1"
-            >
-              {tr(" Остаться ")}</button>
-            <button
-              type="button"
+            <Button variant="secondary" fullWidth onClick={() => setLogoutOpen(false)}>
+              {tr("Остаться")}
+            </Button>
+            <Button
+              variant="danger"
+              fullWidth
+              icon="logout"
               onClick={() => {
                 logout();
                 setLogoutOpen(false);
                 navigate("/auth");
                 toast({ title: tr("Вы вышли из профиля"), variant: "info" });
               }}
-              className="btn btn-sm flex-1 bg-red-500/15 text-red-200 hover:bg-red-500/25"
             >
-              {tr(" Выйти ")}</button>
+              {tr("Выйти")}
+            </Button>
           </div>
         </div>
       </Modal>

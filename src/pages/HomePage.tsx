@@ -163,7 +163,7 @@ export function HomePage() {
       </section>
 
       <section className="mt-14 grid gap-8 sm:mt-16 lg:grid-cols-[1.2fr_0.8fr] lg:gap-10">
-        <div>
+        <div className="min-w-0">
           <SectionHeading
             title={tr("Из ленты")}
             description={tr("Личные находки жителей: свет, кофе, маршруты.")}
@@ -176,7 +176,7 @@ export function HomePage() {
           </div>
         </div>
 
-        <aside className="flex flex-col justify-between gap-6 rounded-3xl bg-sunken p-6 sm:p-7">
+        <aside className="flex min-w-0 flex-col justify-between gap-6 rounded-3xl bg-sunken p-6 sm:p-7">
           <div>
             <span className="flex h-11 w-11 items-center justify-center rounded-full bg-surface text-accent-ink">
               <Icon name="plus" size={20} />

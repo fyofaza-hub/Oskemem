@@ -104,7 +104,7 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
               <Icon name="calendarDays" size={18} className="mt-0.5 shrink-0 text-muted" />
               <div>
                 <dt className="text-meta text-muted">{tr("Дата")}</dt>
-                <dd className="mt-0.5 text-sm font-medium capitalize text-fg">
+                <dd className="mt-0.5 text-sm font-medium text-fg">
                   {formatDate(event.dateISO, { day: "numeric", month: "long", weekday: "long" })}
                 </dd>
               </div>

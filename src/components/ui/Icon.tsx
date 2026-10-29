@@ -107,6 +107,7 @@ const iconRegistry = {
   settings: settingsIcon,
   logout: logoutIcon,
   more: gridIcon,
+  grid: gridIcon,
   layers: layersIcon,
   filter: filterIcon,
   sort: sortIcon,

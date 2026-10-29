@@ -6,11 +6,26 @@ import { Icon, type IconName } from "@/components/ui/Icon";
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "soft-danger" | "inverse";
 export type ButtonSize = "sm" | "md" | "lg";
 
+const sizeClasses: Record<ButtonSize, string> = {
+  sm: "btn-sm",
+  md: "btn-md",
+  lg: "btn-lg",
+};
+
+const variantClasses: Record<ButtonVariant, string> = {
+  primary: "btn-primary",
+  secondary: "btn-secondary",
+  ghost: "btn-ghost",
+  danger: "btn-danger",
+  "soft-danger": "btn-soft-danger",
+  inverse: "btn-inverse",
+};
+
 export const buttonClass = (
   variant: ButtonVariant = "secondary",
   size: ButtonSize = "md",
   className?: string,
-) => cn("btn", `btn-${size}`, `btn-${variant}`, className);
+) => cn("btn", sizeClasses[size], variantClasses[variant], className);
 
 const iconSizes: Record<ButtonSize, number> = { sm: 15, md: 16, lg: 18 };
 

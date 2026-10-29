@@ -53,7 +53,7 @@ export function Sidebar() {
         to={item.to}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "flex h-10 items-center gap-3 rounded-xl px-3 text-[15px] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+          "flex h-10 items-center gap-2.5 rounded-xl px-3 text-[13px] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
           active ? "bg-accent-soft text-accent-ink" : "text-muted hover:bg-sunken hover:text-fg",
         )}
       >
@@ -80,11 +80,11 @@ export function Sidebar() {
           <div className="flex items-center gap-2">
             <Link
               to="/profile"
-              className="flex min-w-0 flex-1 items-center gap-3 rounded-xl p-1.5 transition-colors hover:bg-sunken"
+              className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl p-1.5 transition-colors hover:bg-sunken"
             >
               <Avatar user={currentUser} size="sm" />
               <span className="min-w-0">
-                <span className="block truncate text-sm font-medium text-fg">{currentUser.name}</span>
+                <span className="block truncate text-[13px] font-medium text-fg">{currentUser.name}</span>
                 <span className="block truncate text-meta text-muted">@{currentUser.username}</span>
               </span>
             </Link>

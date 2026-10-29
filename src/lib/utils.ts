@@ -11,16 +11,150 @@ export const uid = (prefix = "id") => {
   return `${prefix}-${value}`;
 };
 
-export const formatDate = (iso: string, options?: Intl.DateTimeFormatOptions) =>
-  new Intl.DateTimeFormat(localeFor(), options ?? { day: "numeric", month: "long" }).format(
-    new Date(iso),
-  );
+const kkMonthsLong = [
+  "қаңтар",
+  "ақпан",
+  "наурыз",
+  "сәуір",
+  "мамыр",
+  "маусым",
+  "шілде",
+  "тамыз",
+  "қыркүйек",
+  "қазан",
+  "қараша",
+  "желтоқсан",
+];
 
-export const formatDateShort = (iso: string) =>
-  new Intl.DateTimeFormat(localeFor(), { day: "2-digit", month: "short" }).format(new Date(iso));
+const kkMonthsShort = [
+  "қаң.",
+  "ақп.",
+  "нау.",
+  "сәу.",
+  "мам.",
+  "мау.",
+  "шіл.",
+  "там.",
+  "қыр.",
+  "қаз.",
+  "қар.",
+  "жел.",
+];
 
-export const formatWeekday = (iso: string) =>
-  new Intl.DateTimeFormat(localeFor(), { weekday: "short" }).format(new Date(iso));
+const kkMonthsFrom = [
+  "қаңтарынан",
+  "ақпанынан",
+  "наурызынан",
+  "сәуірінен",
+  "мамырынан",
+  "маусымынан",
+  "шілдесінен",
+  "тамызынан",
+  "қыркүйегінен",
+  "қазанынан",
+  "қарашасынан",
+  "желтоқсанынан",
+];
+
+const ruMonthsGenitive = [
+  "января",
+  "февраля",
+  "марта",
+  "апреля",
+  "мая",
+  "июня",
+  "июля",
+  "августа",
+  "сентября",
+  "октября",
+  "ноября",
+  "декабря",
+];
+
+const kkWeekdaysShort = ["жс", "дс", "сс", "ср", "бс", "жм", "сб"];
+const kkWeekdaysLong = [
+  "жексенбі",
+  "дүйсенбі",
+  "сейсенбі",
+  "сәрсенбі",
+  "бейсенбі",
+  "жұма",
+  "сенбі",
+];
+
+/**
+ * Chromium и некоторые другие браузеры не содержат данных казахской локали
+ * и показывают «M11 1» или «Sun». Форматируем даты сами, чтобы казахская
+ * версия выглядела одинаково в любом браузере.
+ */
+const formatKazakhDate = (date: Date, options: Intl.DateTimeFormatOptions) => {
+  const weekday =
+    options.weekday === "long"
+      ? kkWeekdaysLong[date.getDay()]
+      : options.weekday
+        ? kkWeekdaysShort[date.getDay()]
+        : "";
+  const day = options.day
+    ? options.day === "2-digit"
+      ? String(date.getDate()).padStart(2, "0")
+      : String(date.getDate())
+    : "";
+  const month =
+    options.month === "long"
+      ? kkMonthsLong[date.getMonth()]
+      : options.month === "short"
+        ? kkMonthsShort[date.getMonth()]
+        : "";
+  const datePart = [day, month].filter(Boolean).join(" ");
+  const yearPart = options.year ? String(date.getFullYear()) : "";
+  return [weekday, [datePart, yearPart].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+};
+
+const isKazakh = () => currentLanguage() === "kk";
+
+const capitalizeFirst = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
+
+export const formatDate = (iso: string, options?: Intl.DateTimeFormatOptions) => {
+  const date = new Date(iso);
+  const resolved = options ?? { day: "numeric", month: "long" };
+  const supportedMonth =
+    !resolved.month || resolved.month === "long" || resolved.month === "short";
+  if (
+    isKazakh() &&
+    supportedMonth &&
+    (resolved.weekday || resolved.day || resolved.month || resolved.year)
+  ) {
+    const formatted = formatKazakhDate(date, resolved);
+    return resolved.weekday ? capitalizeFirst(formatted) : formatted;
+  }
+  const formatted = new Intl.DateTimeFormat(localeFor(), resolved).format(date);
+  return resolved.weekday ? capitalizeFirst(formatted) : formatted;
+};
+
+export const formatDateShort = (iso: string) => {
+  const date = new Date(iso);
+  if (isKazakh()) return formatKazakhDate(date, { day: "2-digit", month: "short" });
+  return new Intl.DateTimeFormat(localeFor(), { day: "2-digit", month: "short" }).format(date);
+};
+
+export const formatWeekday = (iso: string) => {
+  const date = new Date(iso);
+  if (isKazakh()) return kkWeekdaysShort[date.getDay()];
+  return new Intl.DateTimeFormat(localeFor(), { weekday: "short" }).format(date);
+};
+
+/** «с апреля 2025» / «since April 2025» / «2025 жылдың сәуірінен бастап». */
+export const formatJoinedDate = (iso: string) => {
+  const date = new Date(iso);
+  if (isKazakh()) {
+    return `${date.getFullYear()} жылдың ${kkMonthsFrom[date.getMonth()]} бастап`;
+  }
+  if (currentLanguage() === "en") {
+    const month = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(date);
+    return `since ${month}`;
+  }
+  return `с ${ruMonthsGenitive[date.getMonth()]} ${date.getFullYear()}`;
+};
 
 export const formatTime = (iso: string, time?: string) => {
   const formatter = new Intl.DateTimeFormat(localeFor(), {
@@ -42,6 +176,14 @@ export const formatEventRange = (startISO: string, endTime: string) =>
 export const timeAgo = (iso: string) => {
   const diff = Date.now() - new Date(iso).getTime();
   const minutes = Math.max(1, Math.round(diff / 60000));
+  if (isKazakh()) {
+    if (minutes < 60) return `${minutes} минут бұрын`;
+    const hours = Math.round(minutes / 60);
+    if (hours < 24) return `${hours} сағат бұрын`;
+    const days = Math.round(hours / 24);
+    if (days < 7) return `${days} күн бұрын`;
+    return formatDate(iso, { day: "numeric", month: "long" });
+  }
   const relative = new Intl.RelativeTimeFormat(localeFor(), { numeric: "auto" });
   if (minutes < 60) return relative.format(-minutes, "minute");
   const hours = Math.round(minutes / 60);
@@ -117,7 +259,7 @@ export const pluralizeRoutes = (count: number) =>
   `${count} ${pluralWord(count, {
     ru: ["маршрут", "маршрута", "маршрутов"],
     en: ["route", "routes"],
-    kk: "бағдар",
+    kk: "маршрут",
   })}`;
 
 export const pluralizeEvents = (count: number) =>

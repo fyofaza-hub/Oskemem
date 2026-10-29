@@ -36,7 +36,7 @@ export function EventCard({ event, onOpen, variant = "default" }: EventCardProps
 
   if (variant === "row") {
     return (
-      <article className="group relative flex items-center gap-3.5 rounded-2xl border border-line bg-surface p-3 transition-colors hover:border-line-strong">
+      <article className="group relative flex min-w-0 items-center gap-3.5 rounded-2xl border border-line bg-surface p-3 transition-colors hover:border-line-strong">
         <button
           type="button"
           onClick={() => onOpen(event)}
@@ -48,7 +48,7 @@ export function EventCard({ event, onOpen, variant = "default" }: EventCardProps
           <span className="mt-1 text-[12px] font-medium leading-none">{date.month}</span>
         </div>
         <div className="pointer-events-none min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-fg">{event.title}</p>
+          <p className="line-clamp-2 text-sm font-semibold leading-snug text-fg">{event.title}</p>
           <p className="mt-0.5 truncate text-meta text-muted">
             {date.weekday}, {formatEventRange(event.dateISO, event.endTime)} · {placeName}
           </p>
