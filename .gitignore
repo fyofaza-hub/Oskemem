@@ -1,1 +1,12 @@
+# Зависимости и сборка
+node_modules/
+dist/
+
+# Локальные переменные окружения с ключами Supabase — не публикуем
+.env
+
+# Служебное
 .vercel
+*.local
+.DS_Store
+tsconfig.tsbuildinfo

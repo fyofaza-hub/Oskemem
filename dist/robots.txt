@@ -1,5 +1,0 @@
-User-agent: *
-Allow: /
-
-# По мере выезда на прод infra добавьте:
-# Sitemap: https://<домен>/sitemap.xml
