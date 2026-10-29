@@ -18,6 +18,7 @@ import { PageHeader, EmptyState } from "@/components/ui/Bits";
 import { Button, ButtonLink, IconButton } from "@/components/ui/Button";
 import { Field, Input, Select } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
+import { VoiceSearchButton } from "@/components/search/VoiceSearch";
 
 const priceOptions = [
   { value: "any", label: tr("Любой бюджет") },
@@ -198,6 +199,7 @@ export function GuidePage() {
             }
           />
           <div className="flex gap-2">
+            <VoiceSearchButton className="hidden xs:inline-flex" />
             <Button
               variant={showFilters || activeFilterCount ? "secondary" : "secondary"}
               size="md"

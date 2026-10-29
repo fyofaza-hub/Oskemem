@@ -5,46 +5,50 @@
 :root,
 :root[data-theme="light"] {
   color-scheme: light;
-  --canvas: 246 247 249;
+  /* Стальная светлая: аллайский светлый фон, чернильный текст, сигнальный медный акцент */
+  --canvas: 248 250 252;
   --surface: 255 255 255;
-  --sunken: 238 241 246;
-  --line: 205 212 224;
-  --line-strong: 176 186 204;
-  --fg: 15 20 28;
-  --fg-muted: 68 78 96;
-  --fg-faint: 96 106 124;
-  --accent: 37 99 235;
-  --accent-hover: 29 78 216;
-  --accent-soft: 235 242 255;
-  --accent-ink: 29 78 216;
-  --danger: 220 38 38;
-  --danger-hover: 185 28 28;
-  --danger-soft: 254 242 242;
-  --danger-ink: 185 28 28;
-  --scrim: 15 18 24;
+  --sunken: 239 243 248;
+  --line: 226 232 240;
+  --line-strong: 203 213 225;
+  --fg: 15 23 42;
+  --fg-muted: 71 85 105;
+  --fg-faint: 100 116 139;
+  --accent: 255 107 53;
+  --accent-hover: 230 88 40;
+  --accent-soft: 255 237 229;
+  --accent-ink: 193 74 28;
+  --danger: 229 72 77;
+  --danger-hover: 209 57 63;
+  --danger-soft: 254 240 241;
+  --danger-ink: 185 43 48;
+  --scrim: 15 23 42;
+  --route-end: 255 107 53;
   --font-body: "Inter Variable", "Inter", system-ui, sans-serif;
   --font-display: "Onest Variable", "Onest", "Inter Variable", system-ui, sans-serif;
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --canvas: 13 16 21;
-  --surface: 21 25 32;
-  --sunken: 29 34 43;
-  --line: 38 44 55;
-  --line-strong: 56 64 78;
-  --fg: 241 243 247;
-  --fg-muted: 158 166 180;
-  --fg-faint: 110 118 133;
-  --accent: 47 111 235;
-  --accent-hover: 64 128 246;
-  --accent-soft: 27 40 66;
-  --accent-ink: 143 181 255;
-  --danger: 200 36 36;
-  --danger-hover: 220 50 50;
-  --danger-soft: 58 20 22;
+  /* Глубокий чистый чёрный: максимальный контраст, OLED-экономия */
+  --canvas: 8 9 12;
+  --surface: 17 19 24;
+  --sunken: 27 30 37;
+  --line: 40 45 56;
+  --line-strong: 68 75 89;
+  --fg: 232 235 240;
+  --fg-muted: 150 156 168;
+  --fg-faint: 104 111 123;
+  --accent: 255 140 97;
+  --accent-hover: 255 158 124;
+  --accent-soft: 46 33 27;
+  --accent-ink: 255 172 138;
+  --danger: 246 85 85;
+  --danger-hover: 252 105 100;
+  --danger-soft: 66 26 28;
   --danger-ink: 252 165 165;
   --scrim: 0 0 0;
+  --route-end: 255 140 97;
 }
 
 * {
@@ -61,7 +65,11 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: rgb(var(--canvas));
+  background:
+    radial-gradient(1400px 480px at 75% -12%, rgb(var(--accent) / 0.055), transparent 72%),
+    radial-gradient(900px 360px at 12% -6%, rgb(var(--accent) / 0.035), transparent 70%),
+    rgb(var(--canvas));
+  background-attachment: fixed;
   color: rgb(var(--fg));
   font-family: var(--font-body);
   font-size: 15px;
@@ -122,12 +130,19 @@ img {
 }
 
 ::selection {
-  background: rgb(var(--accent) / 0.25);
-  color: inherit;
+  background: rgb(var(--accent) / 0.22);
+  color: var(--fg);
+}
+
+/* iOS/Safari на мобильных плохо держит fixed-фон — там пусть просто скроллится */
+@media (max-width: 1024px) {
+  body {
+    background-attachment: scroll;
+  }
 }
 
 :focus-visible {
-  outline: 2px solid rgb(var(--accent));
+  outline: 2px solid rgb(var(--accent) / 0.75);
   outline-offset: 2px;
 }
 
@@ -144,6 +159,11 @@ img {
   border: 2px solid transparent;
   border-radius: 99px;
   background: rgb(var(--fg) / 0.14);
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--fg) / 0.26);
   background-clip: content-box;
 }
 
@@ -187,7 +207,13 @@ img {
   }
 
   .btn-primary {
-    @apply bg-accent text-white hover:bg-accent-hover;
+    background: linear-gradient(180deg, rgb(var(--accent)), rgb(var(--accent-hover)));
+    @apply text-white hover:brightness-110 active:brightness-100;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.16), 0 1px 2px rgb(15 23 42 / 0.2);
+  }
+
+  .btn-primary:hover {
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.18), 0 2px 6px rgb(15 23 42 / 0.24);
   }
 
   .btn-secondary {
@@ -261,11 +287,11 @@ img {
   }
 
   .card-interactive {
-    @apply transition-[border-color,box-shadow] duration-300 ease-smooth hover:border-line-strong hover:shadow-raised;
+    @apply transition-[border-color,box-shadow,transform] duration-300 ease-smooth hover:-translate-y-0.5 hover:border-line-strong hover:shadow-raised;
   }
 
   :root[data-theme="light"] .card {
-    box-shadow: 0 1px 3px rgb(15 23 42 / 0.08), 0 1px 2px rgb(15 23 42 / 0.05);
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.06), 0 1px 3px rgb(15 23 42 / 0.04);
   }
 
   .badge {
@@ -306,6 +332,10 @@ img {
 
   .prose-muted {
     @apply text-[15px] leading-relaxed text-muted;
+  }
+
+  .section-label {
+    @apply px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-faint;
   }
 }
 
@@ -403,7 +433,7 @@ img {
 .oc-pin {
   width: 16px;
   height: 16px;
-  border: 2px solid rgb(var(--accent));
+  border: 2px solid var(--pin-accent, rgb(var(--accent)));
   border-radius: 50%;
   background: rgb(var(--surface));
   box-shadow: 0 2px 6px rgb(15 23 42 / 0.25);
@@ -413,9 +443,9 @@ img {
 .oc-pin.is-active {
   width: 20px;
   height: 20px;
-  background: rgb(var(--accent));
+  background: var(--pin-accent, rgb(var(--accent)));
   box-shadow:
-    0 0 0 4px rgb(var(--accent) / 0.25),
+    0 0 0 4px color-mix(in srgb, var(--pin-accent, rgb(var(--accent))) 30%, transparent),
     0 4px 12px rgb(15 23 42 / 0.3);
 }
 
@@ -427,8 +457,8 @@ img {
   height: 30px;
   border: 2px solid rgb(var(--surface));
   border-radius: 50%;
-  background: rgb(var(--accent));
-  color: #fff;
+  background: rgb(var(--fg));
+  color: var(--canvas);
   font-family: var(--font-display);
   font-size: 13px;
   font-weight: 600;
@@ -441,6 +471,15 @@ img {
   box-shadow:
     0 0 0 4px rgb(var(--accent) / 0.3),
     0 4px 12px rgb(15 23 42 / 0.3);
+}
+
+/* Первая и последняя точки маршрута: Старт / Финиш */
+.oc-stop.is-start {
+  background: #10B981;
+}
+
+.oc-stop.is-end {
+  background: rgb(var(--route-end));
 }
 
 .oc-pick {

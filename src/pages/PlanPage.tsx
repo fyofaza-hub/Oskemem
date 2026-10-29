@@ -371,7 +371,7 @@ export function PlanPage() {
             {step === 0 ? (
               <div>
                 <h2 className="font-display text-2xl font-semibold tracking-[-0.02em] text-fg sm:text-[28px]">
-                  {tr("С кем вы хотите провести этот вечер?")}
+                  {tr("С кем хотите провести этот день?")}
                 </h2>
                 <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted">
                   {tr("От компании зависит темп и формат. Выберите один вариант — потом всё можно изменить.")}

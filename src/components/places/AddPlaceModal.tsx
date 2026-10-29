@@ -4,6 +4,7 @@ import { categories, companionOptions } from "@/data/categories";
 import { useApp } from "@/context/AppContext";
 import { useToast } from "@/context/ToastContext";
 import { cn, compressImage, validateImageFile } from "@/lib/utils";
+import { track } from "@/lib/analytics";
 import { tr } from "@/i18n/runtime";
 import { Modal } from "@/components/ui/Modal";
 import { Button, IconButton } from "@/components/ui/Button";
@@ -135,6 +136,7 @@ export function AddPlaceModal({ open, onClose, onCreated, initialCoords }: AddPl
       toast({ title: tr("Не удалось добавить место"), description: result.error, variant: "error" });
       return;
     }
+    track("place_added", { place_id: result.place.id, category: result.place.category });
     toast({
       title: tr("Место добавлено"),
       description: tr("«{name}» уже на карте, в гиде и доступно для маршрутов.", { name: result.place.name }),
@@ -182,11 +184,11 @@ export function AddPlaceModal({ open, onClose, onCreated, initialCoords }: AddPl
                 pickMarker={coords ? { coords, label: name || tr("Ваше место") } : null}
               />
               {!coords ? (
-                <p className="pointer-events-none absolute inset-x-3 bottom-3 z-[500] rounded-xl bg-surface/95 px-3 py-2 text-meta text-muted shadow-card">
+                <p className="pointer-events-none absolute inset-x-3 bottom-3 z-[65] rounded-xl bg-surface/95 px-3 py-2 text-meta text-muted shadow-card">
                   {tr("Найдите место на карте и нажмите на него. Координаты сохранятся автоматически.")}
                 </p>
               ) : (
-                <div className="absolute inset-x-3 bottom-3 z-[500] flex items-center justify-between gap-2 rounded-xl bg-surface/95 px-3 py-2 shadow-card">
+                <div className="absolute inset-x-3 bottom-3 z-[65] flex items-center justify-between gap-2 rounded-xl bg-surface/95 px-3 py-2 shadow-card">
                   <span className="flex items-center gap-1.5 text-meta font-medium text-accent-ink">
                     <Icon name="check" size={14} />
                     {tr("Точка выбрана")}

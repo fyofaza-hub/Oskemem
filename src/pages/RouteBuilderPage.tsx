@@ -540,7 +540,7 @@ export function RouteBuilderPage() {
                   showLocate={false}
                 />
                 {!stops.length ? (
-                  <div className="pointer-events-none absolute inset-x-4 top-1/2 z-[500] -translate-y-1/2 rounded-2xl border border-line bg-surface/95 p-4 text-center shadow-card backdrop-blur-md">
+                  <div className="pointer-events-none absolute inset-x-4 top-1/2 z-[65] -translate-y-1/2 rounded-2xl border border-line bg-surface/95 p-4 text-center shadow-card backdrop-blur-md">
                     <Icon name="location" size={18} className="mx-auto text-accent-ink" />
                     <p className="mt-2 text-sm font-medium text-fg">{tr("Здесь появится ваш маршрут")}</p>
                     <p className="mt-1 text-meta text-muted">{tr("Добавьте первую точку из гида")}</p>

@@ -67,6 +67,7 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
           <MenuRow to="/routes" icon="routes" label={tr("Маршруты")} onClick={close} />
           <MenuRow to="/events" icon="events" label={tr("События")} onClick={close} />
           <MenuRow to="/profile?tab=favorites" icon="heart" label={tr("Избранное")} onClick={close} />
+          <MenuRow to="/navigation" icon="notebook" label={tr("Навигация по сайту")} onClick={close} />
           {currentUser ? (
             <MenuRow to="/profile" icon="user" label={tr("Профиль")} onClick={close} />
           ) : null}

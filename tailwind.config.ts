@@ -35,8 +35,8 @@ export default {
         meta: ["13px", { lineHeight: "18px" }],
       },
       boxShadow: {
-        card: "0 1px 2px rgb(15 23 42 / 0.04)",
-        raised: "0 16px 40px -12px rgb(15 23 42 / 0.22), 0 2px 6px rgb(15 23 42 / 0.06)",
+        card: "0 1px 2px rgb(15 23 42 / 0.05), 0 1px 3px rgb(15 23 42 / 0.05)",
+        raised: "0 24px 50px -20px rgb(15 23 42 / 0.3), 0 4px 12px -4px rgb(15 23 42 / 0.13)",
       },
       transitionTimingFunction: {
         smooth: "cubic-bezier(0.22, 1, 0.36, 1)",

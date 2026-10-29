@@ -482,7 +482,7 @@ export function MapPage() {
                 />
               )}
 
-              <div className="pointer-events-none absolute left-3 top-3 z-[500] flex items-center gap-2 rounded-full border border-line bg-surface/95 px-3 py-1.5 shadow-card backdrop-blur-md">
+              <div className="pointer-events-none absolute left-3 top-3 z-[65] flex items-center gap-2 rounded-full border border-line bg-surface/95 px-3 py-1.5 shadow-card backdrop-blur-md">
                 <span className="h-1.5 w-1.5 rounded-full bg-accent" />
                 <span className="text-meta font-medium text-fg">
                   {mode === "routes" ? activeRoute?.title : `${filtered.length} ${tr("мест")} · ${tr("Өскемен")}`}
@@ -509,14 +509,14 @@ export function MapPage() {
                       tr("Войдите, чтобы отметить своё место"),
                     );
                   }}
-                  className="absolute right-3 top-14 z-[500] shadow-card"
+                  className="absolute right-3 top-14 z-[65] shadow-card"
                 >
                   {tr("Отметить точку")}
                 </Button>
               ) : null}
 
               {markMode ? (
-                <div className="pointer-events-none absolute inset-x-3 bottom-3 z-[500] flex justify-center">
+                <div className="pointer-events-none absolute inset-x-3 bottom-3 z-[65] flex justify-center">
                   <div className="flex items-center gap-2 rounded-full border border-accent/30 bg-surface/95 px-4 py-2 shadow-raised backdrop-blur-md">
                     <Icon name="crosshair" size={15} className="text-accent" />
                     <span className="text-sm text-fg">{tr("Нажмите на карту, чтобы поставить точку")}</span>
@@ -525,7 +525,7 @@ export function MapPage() {
               ) : null}
 
               {mode === "places" && activePlace ? (
-                <div className="absolute inset-x-3 bottom-3 z-[500] sm:left-3 sm:right-auto sm:w-[320px]">
+                <div className="absolute inset-x-3 bottom-3 z-[65] sm:left-3 sm:right-auto sm:w-[320px]">
                   <div className="overflow-hidden rounded-2xl border border-line bg-surface shadow-raised">
                     <div className="flex gap-3 p-2.5">
                       <img

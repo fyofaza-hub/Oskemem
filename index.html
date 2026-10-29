@@ -3,17 +3,58 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" content="#0D1015" />
+
+    <title>Oskemen Culture — открой свой город</title>
     <meta
       name="description"
       content="Oskemen Culture — открой свой город. Места, события и маршруты Өскемена в одном пространстве."
     />
-    <meta property="og:title" content="Oskemen Culture" />
-    <meta property="og:description" content="Открой свой город. Поделись своим миром." />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Oskemen Culture — открой свой город" />
+    <meta
+      property="og:description"
+      content="Места, события и маршруты Өскемена — от людей, которые здесь живут."
+    />
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Oskemen Culture" />
+    <meta property="og:locale" content="ru_RU" />
+    <meta property="og:locale:alternate" content="kk_KZ" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <meta property="og:image" content="/images/panorama.webp" />
+    <meta property="og:image:alt" content="Набережная Өскемена — городской пейзаж Oskemen Culture" />
+
+    <!-- Twitter / X -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Oskemen Culture — открой свой город" />
+    <meta
+      name="twitter:description"
+      content="Места, события и маршруты Өскемена — от людей, которые здесь живут."
+    />
+    <meta name="twitter:image" content="/images/panorama.webp" />
+
+    <!-- Карта сайта и иконки -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <title>Oskemen Culture — открой свой город</title>
+    <!-- DNS‑прогрев для тайлов карты на странице «Карта» -->
+    <link rel="dns-prefetch" href="https://tile.openstreetmap.org" />
+
+    <!-- Schema.org: сайт с поиском по городскому гиду -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Oskemen Culture",
+        "alternateName": "Өскемен мәдениеті",
+        "description": "Социальный гид по Өскемену: места, события и маршруты, собранные сообществом.",
+        "inLanguage": ["ru", "kk", "en"],
+        "image": "/images/panorama.webp"
+      }
+    </script>
+
     <script>
       (function () {
         try {
@@ -27,7 +68,7 @@
           document.documentElement.dataset.theme = theme;
           document.documentElement.style.colorScheme = theme;
           var meta = document.querySelector('meta[name="theme-color"]');
-          if (meta) meta.setAttribute("content", theme === "light" ? "#F6F7F9" : "#0D1015");
+          if (meta) meta.setAttribute("content", theme === "light" ? "#F8FAFC" : "#08090C");
         } catch (error) {
           document.documentElement.dataset.theme = "dark";
         }

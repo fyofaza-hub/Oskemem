@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { tr } from "@/i18n/runtime";
+import { prefetchOnIdle } from "@/lib/prefetch";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { MobileNav } from "@/components/layout/MobileNav";
@@ -18,6 +19,11 @@ export function AppShell() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
   }, [location.pathname]);
+
+  // Прогрев малых чанков вероятных переходов — навигация ощущается мгновенной.
+  useEffect(() => {
+    prefetchOnIdle();
+  }, []);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {

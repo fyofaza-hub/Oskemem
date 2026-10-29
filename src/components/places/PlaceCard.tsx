@@ -4,6 +4,7 @@ import { useApp } from "@/context/AppContext";
 import { useToast } from "@/context/ToastContext";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { cn, priceLabel } from "@/lib/utils";
+import { track } from "@/lib/analytics";
 import { tr } from "@/i18n/runtime";
 import { categoryMap } from "@/data/categories";
 import { CategoryIcon } from "@/components/ui/Category";
@@ -34,6 +35,7 @@ export function PlaceCard({ place, onOpen, variant = "default", index }: PlaceCa
   const handleFavorite = () => {
     requireAuth(() => {
       toggleFavorite(place.id);
+      track("place_favorite", { place_id: place.id, saved: !favorite });
       toast({
         title: favorite ? tr("Убрано из избранного") : tr("Сохранено в избранное"),
         description: place.name,
@@ -49,6 +51,7 @@ export function PlaceCard({ place, onOpen, variant = "default", index }: PlaceCa
         toast({ title: tr("Место уже в маршруте"), description: tr("Откройте конструктор, чтобы изменить порядок."), variant: "info" });
         return;
       }
+      track("place_in_route", { place_id: place.id });
       toast({
         title: tr("Добавлено в маршрут"),
         description: place.name,

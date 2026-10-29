@@ -336,7 +336,7 @@ export function RouteDetailPage() {
                   className="h-full"
                   showLocate={false}
                 />
-                <span className="pointer-events-none absolute left-3 top-3 z-[500] inline-flex items-center gap-1.5 rounded-full border border-line bg-surface/95 px-2.5 py-1.5 text-meta font-medium text-fg shadow-card backdrop-blur-md">
+                <span className="pointer-events-none absolute left-3 top-3 z-[65] inline-flex items-center gap-1.5 rounded-full border border-line bg-surface/95 px-2.5 py-1.5 text-meta font-medium text-fg shadow-card backdrop-blur-md">
                   <Icon name="routes" size={13} className="text-accent-ink" />
                   {pluralizeStops(route.stops.length)} · {route.distanceKm} {tr("км")}
                 </span>

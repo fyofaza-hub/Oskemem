@@ -5,6 +5,7 @@ import { demoAccount } from "@/data/users";
 import { useApp } from "@/context/AppContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useToast } from "@/context/ToastContext";
+import { track } from "@/lib/analytics";
 import { tr } from "@/i18n/runtime";
 import { Logo } from "@/components/ui/Logo";
 import { Button, ButtonLink, IconButton } from "@/components/ui/Button";
@@ -49,12 +50,18 @@ export function AuthPage() {
   }, [mode]);
 
   const finish = (isLogin: boolean) => {
+    track(isLogin ? "auth_login" : "auth_register");
     toast({
       title: isLogin ? tr("С возвращением") : tr("Аккаунт создан"),
       description: `${
         isLogin ? tr("Вы вошли в локальный профиль.") : tr("Добро пожаловать в Oskemen Culture.")
-      } ${tr("Все данные остаются в этом браузере.")}`,
+      } ${isLogin ? "" : tr("Начнём с короткого обучения.")}`,
     });
+    if (!isLogin) {
+      // После регистрации сразу открываем раздел «Навигация по сайту» с обучением
+      navigate("/navigation", { replace: true, state: { welcome: true } });
+      return;
+    }
     navigate(target, { replace: true });
   };
 
@@ -99,6 +106,7 @@ export function AuthPage() {
       );
       return;
     }
+    track("auth_login", { provider: "demo" });
     toast({
       title: tr("Вы вошли"),
       description: tr("Профиль Алины открыт. Все изменения сохранятся только в этом браузере."),

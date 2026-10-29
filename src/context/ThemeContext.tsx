@@ -19,8 +19,8 @@ interface ThemeContextValue {
 
 const STORAGE_KEY = "oskemen-theme";
 const THEME_COLORS: Record<Theme, string> = {
-  dark: "#0B0E13",
-  light: "#F3F5F9",
+  dark: "#08090C",
+  light: "#F8FAFC",
 };
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);

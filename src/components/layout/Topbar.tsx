@@ -9,6 +9,7 @@ import { ButtonLink, IconButton } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { UserMenu } from "@/components/layout/UserMenu";
+import { VoiceSearchButton } from "@/components/search/VoiceSearch";
 
 const sections: Array<{ match: (path: string) => boolean; label: string }> = [
   { match: (path) => path === "/", label: tr("Главная") },
@@ -20,6 +21,7 @@ const sections: Array<{ match: (path: string) => boolean; label: string }> = [
   { match: (path) => path.startsWith("/events"), label: tr("События") },
   { match: (path) => path.startsWith("/feed"), label: tr("Лента") },
   { match: (path) => path.startsWith("/profile"), label: tr("Профиль") },
+  { match: (path) => path.startsWith("/navigation"), label: tr("Навигация по сайту") },
   { match: (path) => path.startsWith("/auth"), label: tr("Вход") },
 ];
 
@@ -35,7 +37,7 @@ export function Topbar({ onSearch }: TopbarProps) {
   const title = section?.label ?? tr("Oskemen Culture");
 
   return (
-    <header className="sticky top-0 z-30 border-b border-line bg-canvas/85 backdrop-blur-xl">
+    <header className="sticky top-0 z-30 border-b border-line bg-canvas/80 backdrop-blur-xl backdrop-saturate-150">
       <div className="flex h-14 items-center gap-3 px-4 sm:px-6 lg:h-16 lg:px-8">
         <div className="min-w-0 flex-1 lg:flex-none">
           <h2 className="truncate text-[17px] font-semibold tracking-[-0.01em] text-fg lg:text-base">{title}</h2>
@@ -47,11 +49,13 @@ export function Topbar({ onSearch }: TopbarProps) {
             onClick={onSearch}
             aria-label={tr("Открыть поиск")}
             title={tr("Поиск")}
-            className="group hidden h-10 w-64 items-center gap-2.5 rounded-xl border border-line bg-surface px-3 text-left text-sm text-faint transition-colors duration-200 hover:border-line-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:flex xl:w-72"
+            className="group hidden h-10 w-64 items-center gap-2.5 rounded-xl border border-line bg-surface px-3 text-left text-sm text-faint shadow-card transition-colors duration-200 hover:border-line-strong hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:flex xl:w-72"
           >
             <span className="flex-1 truncate">{tr("Найти место, событие или маршрут")}</span>
             <span className="kbd">Ctrl K</span>
           </button>
+          <VoiceSearchButton />
+
           <IconButton icon="search" label={tr("Открыть поиск")} className="lg:hidden" onClick={onSearch} />
 
           <div className="hidden lg:block">

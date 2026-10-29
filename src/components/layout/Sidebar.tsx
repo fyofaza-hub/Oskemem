@@ -31,6 +31,10 @@ const personalNav: NavItem[] = [
   { label: tr("Профиль"), to: "/profile", icon: "user" },
 ];
 
+const helpNav: NavItem[] = [
+  { label: tr("Навигация по сайту"), to: "/navigation", icon: "notebook" },
+];
+
 export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -54,7 +58,9 @@ export function Sidebar() {
         aria-current={active ? "page" : undefined}
         className={cn(
           "flex h-10 items-center gap-2.5 rounded-xl px-3 text-[13px] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
-          active ? "bg-accent-soft text-accent-ink" : "text-muted hover:bg-sunken hover:text-fg",
+          active
+            ? "bg-accent-soft text-accent-ink ring-1 ring-inset ring-accent/20"
+            : "text-muted hover:bg-sunken hover:text-fg",
         )}
       >
         <Icon name={item.icon} size={18} />
@@ -64,15 +70,20 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-line bg-surface lg:flex">
+    <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-line bg-canvas lg:flex">
       <div className="flex h-16 shrink-0 items-center px-5">
         <Logo />
       </div>
 
       <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-3 py-2" aria-label={tr("Основная навигация")}>
+        <p className="section-label pt-1">{tr("Разделы")}</p>
         {primaryNav.map(renderItem)}
         <div className="my-3 border-t border-line" />
+        <p className="section-label">{tr("Личное")}</p>
         {personalNav.map(renderItem)}
+        <div className="my-3 border-t border-line" />
+        <p className="section-label">{tr("Помощь")}</p>
+        {helpNav.map(renderItem)}
         {isAdmin ? (
           <Link
             to="/admin"
@@ -90,7 +101,7 @@ export function Sidebar() {
 
       <div className="shrink-0 border-t border-line p-3">
         {currentUser ? (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 rounded-2xl border border-line bg-canvas p-1.5 transition-colors hover:border-line-strong">
             <Link
               to="/profile"
               className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl p-1.5 transition-colors hover:bg-sunken"

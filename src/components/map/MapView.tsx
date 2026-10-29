@@ -40,23 +40,46 @@ const escapeHtml = (value: string) =>
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
 
-const markerIcon = (index: number | null, active: boolean, name: string) => {
+const markerIcon = (
+  index: number | null,
+  active: boolean,
+  name: string,
+  options: { category?: string; position: "single" | "first" | "middle" | "last" } = { position: "single" },
+) => {
   if (index !== null) {
+    const extra =
+      options.position === "first" ? " is-start" : options.position === "last" ? " is-end" : "";
     return {
-      html: `<div class="oc-stop${active ? " is-active" : ""}">${index + 1}</div>`,
+      html: `<div class="oc-stop${extra}${active ? " is-active" : ""}">${index + 1}</div>`,
       size: [30, 30] as [number, number],
       anchor: [15, 15] as [number, number],
     };
   }
+  const pinColor = options.category ? categoryColor(options.category) : null;
+  const style = pinColor ? ` style="--pin-accent: ${pinColor}"` : "";
   return {
-    html: `<div class="oc-pin${active ? " is-active" : ""}" title="${escapeHtml(name)}"></div>`,
+    html: `<div class="oc-pin${active ? " is-active" : ""}" title="${escapeHtml(name)}"${style}></div>`,
     size: [20, 20] as [number, number],
     anchor: [10, 10] as [number, number],
   };
 };
 
+/** Цвет маркера по категории города — приглушённые, но различимые оттенки. */
+const categoryColor = (category?: string) => {
+  const colors: Record<string, string> = {
+    food: "#F59E0B",
+    nature: "#10B981",
+    leisure: "#0EA5E9",
+    culture: "#8B5CF6",
+    entertainment: "#EC4899",
+    sport: "#14B8A6",
+    landmark: "#64748B",
+  };
+  return category ? colors[category] ?? null : null;
+};
+
 const keyOf = (items?: MapMarker[]) =>
-  items?.map((m) => `${m.id}@${m.name}@${m.coords[0]},${m.coords[1]}`).join(";") ?? "";
+  items?.map((m) => `${m.id}@${m.name}@${m.coords[0]},${m.coords[1]}@${m.category ?? ""}`).join(";") ?? "";
 
 /**
  * Карта Leaflet с маркерами, маршрутом и выбором точки.
@@ -119,6 +142,10 @@ export function MapView({
         zoom,
         zoomControl: false,
         attributionControl: true,
+        // Один мир вместо бесконечных копий: карта ограничена Өскеменом и окрестностями.
+        minZoom: 11,
+        maxBounds: L.latLngBounds([49.6, 82.2], [50.25, 83.1]),
+        maxBoundsViscosity: 0.9,
         dragging: interactive,
         scrollWheelZoom: interactive,
         doubleClickZoom: interactive,
@@ -133,6 +160,8 @@ export function MapView({
         attribution:
           '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors, <a href="https://foundation.wikimedia.org/wiki/Maps_Terms_of_Use" target="_blank" rel="noreferrer">Wikimedia Maps</a>',
         maxZoom: 18,
+        noWrap: true,
+        bounds: L.latLngBounds([49.6, 82.2], [50.25, 83.1]),
         crossOrigin: true,
         errorTileUrl: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
       }).addTo(map);
@@ -178,7 +207,16 @@ export function MapView({
     const items = isRouteMode ? (stops as MapMarker[]) : markersRef.current;
 
     items.forEach((marker, index) => {
-      const icon = markerIcon(isRouteMode ? index : null, activeId === marker.id, marker.name);
+      const position =
+        !isRouteMode || items.length < 2 || index === 0
+          ? "single"
+          : index === items.length - 1
+            ? "last"
+            : "middle";
+      const icon = markerIcon(isRouteMode ? index : null, activeId === marker.id, marker.name, {
+        category: marker.category,
+        position: isRouteMode && index === 0 && items.length >= 2 ? "first" : position,
+      });
       const instance = L.marker(marker.coords, {
         icon: L.divIcon({
           className: "",
@@ -206,15 +244,17 @@ export function MapView({
     layer.clearLayers();
     const points = routeRef.current;
     if (points && points.length > 1) {
+      const dark = document.documentElement.dataset.theme === "dark";
+      // Тёмная тема: линия читается светлым графитом; светлая — чернильно-синий.
       L.polyline(points, {
-        color: "#0D1015",
+        color: dark ? "#050810" : "#0F172A",
         weight: 6,
-        opacity: 0.18,
+        opacity: 0.2,
         lineCap: "round",
         lineJoin: "round",
       }).addTo(layer);
       L.polyline(points, {
-        color: "#2563EB",
+        color: dark ? "#FF8C61" : "#FF6B35",
         weight: 3,
         opacity: 0.95,
         dashArray: "2 8",
@@ -325,7 +365,7 @@ export function MapView({
           variant="media"
           onClick={locate}
           disabled={locating}
-          className="absolute right-3 top-3 z-[500]"
+          className="absolute right-3 top-3 z-[65]"
         />
       ) : null}
     </div>
