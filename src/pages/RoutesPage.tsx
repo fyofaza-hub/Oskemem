@@ -89,6 +89,7 @@ export function RoutesPage() {
   return (
     <div className="page-wrap">
       <PageHeader
+        dataTour="routes"
         title={tr("Маршруты")}
         description={tr("Готовые сценарии прогулок и вечеров — или собственный маршрут из любимых мест. Порядок и время можно менять.")}
         actions={

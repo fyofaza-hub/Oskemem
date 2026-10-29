@@ -1,1 +1,0 @@
-import{a as t}from"./motion-CojUn1B-.js";function a(e=420){const[o,r]=t.useState(!1);return t.useEffect(()=>{const s=window.setTimeout(()=>r(!0),e);return()=>window.clearTimeout(s)},[e]),o}export{a as u};

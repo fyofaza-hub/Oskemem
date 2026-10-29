@@ -56,7 +56,7 @@ export function HomePage() {
 
   return (
     <div className="page-wrap">
-      <section className="grid items-center gap-8 lg:grid-cols-[1.02fr_0.98fr] lg:gap-14">
+      <section className="grid items-center gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12 lg:px-2 xl:gap-16 xl:px-6">
         <div>
           <p className="text-meta font-medium uppercase tracking-[0.14em] text-muted">
             {greeting()}
@@ -68,11 +68,11 @@ export function HomePage() {
           <p className="mt-4 max-w-md text-[17px] leading-relaxed text-muted">
             {tr("Места, события и маршруты Өскемена — от людей, которые здесь живут.")}
           </p>
-          <div className="mt-8 flex flex-wrap gap-2.5">
-            <ButtonLink to="/plan" variant="primary" size="lg" icon="plan">
+          <div className="mt-8 flex flex-wrap gap-3" data-tour="plan-cta">
+            <ButtonLink to="/plan" variant="primary" size="lg" icon="plan" className="px-6">
               {tr("Куда сходить?")}
             </ButtonLink>
-            <ButtonLink to="/guide" variant="secondary" size="lg" icon="guide">
+            <ButtonLink to="/guide" variant="secondary" size="lg" icon="guide" className="px-6">
               {tr("Смотреть места")}
             </ButtonLink>
           </div>

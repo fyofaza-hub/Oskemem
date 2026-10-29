@@ -160,6 +160,24 @@ const companionsByCategory: Record<CategoryId, Companion[]> = {
   leisure: ["solo", "couple", "friends", "family"],
 };
 
+const mallCopy: PlaceCopy[] = [
+  {
+    description:
+      "Торговый центр {name} в районе {district}: магазины, кафе и сервисы под одной крышей. Часы работы и список магазинов уточните перед визитом.",
+    shortDescription: "Торговый центр в районе {district}.",
+  },
+  {
+    description:
+      "{name} — торговый центр в районе {district}. Здесь удобно совместить покупки, кофе и услуги; актуальный график уточняйте на месте.",
+    shortDescription: "Шопинг и услуги в районе {district}.",
+  },
+  {
+    description:
+      "Гипермаркет {name} в районе {district}. Большая закупка одним заходом; часы работы и условия парковки уточните заранее.",
+    shortDescription: "Гипермаркет в районе {district}.",
+  },
+];
+
 function districtFor([lat, lon]: [number, number]) {
   if (lat < 49.92 || lon > 82.67 || lon < 82.55) return "Окрестности Өскемена";
   if (lat < 49.94) return "Левый берег";
@@ -169,10 +187,11 @@ function districtFor([lat, lon]: [number, number]) {
   return "Стрелка";
 }
 
-function createPlaces(category: CategoryId, points: OsmPlacePoint[]): Place[] {
+function createPlaces(category: CategoryId, points: OsmPlacePoint[], templates?: PlaceCopy[]): Place[] {
   return points.map((point, index) => {
     const district = districtFor(point.coords);
-    const copy = copyByCategory[category][index % copyByCategory[category].length];
+    const templateList = templates ?? copyByCategory[category];
+    const copy = templateList[index % templateList.length];
     return {
       id: `place-osm-${point.osmId}`,
       name: point.name,
@@ -282,6 +301,39 @@ const marketPoints: OsmPlacePoint[] = [
   { osmId: "89399476", name: "Рынок «Дос-Нар»", coords: [49.9651897, 82.5870032], address: "улица Виноградова, 17А" },
 ];
 
+const mallPoints: OsmPlacePoint[] = [
+  { osmId: "44632765", name: "ТРЦ «ADK»", coords: [49.9850592, 82.5925496], address: "улица Бажова, 110" },
+  { osmId: "748958171", name: "ТЦ «ADK river»", coords: [49.942987, 82.6257357] },
+  { osmId: "47856541", name: "ЦУМ", coords: [49.9503769, 82.6176094], address: "улица Максима Горького, 71" },
+  { osmId: "47859173", name: "ТЦ «Нарын»", coords: [49.9508137, 82.6184559], address: "улица Максима Горького, 74" },
+  { osmId: "47859193", name: "ТЦ «Сауле»", coords: [49.9498366, 82.6216361], address: "улица Максима Горького, 62" },
+  { osmId: "47859293", name: "ТЦ «Пассаж»", coords: [49.9536304, 82.6316949] },
+  { osmId: "47859321", name: "ТЦ «Евразия»", coords: [49.9514709, 82.6350089], address: "улица Кабанбай батыра, 140" },
+  { osmId: "47859275", name: "ТЦ «Зангар»", coords: [49.9517767, 82.6340937], address: "улица Кабанбай батыра, 144" },
+  { osmId: "10574187431", name: "ТЦ «Ануара»", coords: [49.9520374, 82.6331306], address: "улица Кабанбай батыра, 146/1" },
+  { osmId: "47859522", name: "ТЦ «Мерей»", coords: [49.9460955, 82.6491413], address: "улица Кабанбай батыра, 76" },
+  { osmId: "47859482", name: "ТЦ «Альшемали»", coords: [49.9614007, 82.6339768] },
+  { osmId: "7004013612", name: "ТЦ «Император»", coords: [49.9509403, 82.6165223] },
+  { osmId: "2440065987", name: "ТЦ «Саянур»", coords: [49.9489055, 82.6392648] },
+  { osmId: "1150941033", name: "ТД «Коктем»", coords: [49.9652317, 82.5989485] },
+  { osmId: "237688250", name: "ТЦ «Океан»", coords: [49.8984533, 82.6132439], address: "Утепова улица, 25/2" },
+  { osmId: "396693279", name: "ТРЦ «Тамирлан»", coords: [49.9584414, 82.6136777], address: "проспект Абая, 1/4" },
+  { osmId: "47858105", name: "ТЦ «Адем»", coords: [49.9801663, 82.5808448], address: "проспект Нурсултана Назарбаева, 86/3" },
+  { osmId: "262385723", name: "ТЦ «Музтау»", coords: [49.9497341, 82.6170767], address: "улица Тохтарова, 56/4" },
+  { osmId: "2317689129", name: "ТД «Элегант»", coords: [49.9732119, 82.5899605], address: "проспект Нурсултана Назарбаева, 66" },
+  { osmId: "9969233956", name: "Универсам № 3", coords: [49.947594, 82.6491152], address: "улица Льва Толстого, 8" },
+  { osmId: "179259211", name: "Гипермаркет Metro", coords: [49.9155737, 82.6244105], address: "проспект Каныша Сатпаева, 76/2" },
+  { osmId: "10804017143", name: "Гипермаркет Magnum", coords: [49.9496649, 82.6177776] },
+  { osmId: "829667942", name: "Оптомаркет «Магнум»", coords: [49.9294993, 82.6126964] },
+  { osmId: "359153717", name: "Fresh Market", coords: [49.9225102, 82.6213082], address: "проспект Каныша Сатпаева, 84" },
+  { osmId: "645164650", name: "Гастроном «Волна»", coords: [49.9497931, 82.6402272], address: "улица Бурова, 7" },
+  { osmId: "2457054963", name: "Супермаркет «Гульдер»", coords: [49.8997953, 82.6154172] },
+  { osmId: "1474885501", name: "Супермаркет «Достык»", coords: [49.9001311, 82.6164057] },
+  { osmId: "47857477", name: "Магазин «Горизонт»", coords: [49.9649746, 82.613007], address: "улица Михаэлиса, 4" },
+  { osmId: "68868415", name: "Супермаркет «Даниэль»", coords: [49.9569211, 82.6138896], address: "проспект Абая, 1/1" },
+  { osmId: "11809885187", name: "Family Market", coords: [49.9236022, 82.6294027] },
+];
+
 const foodPoints: OsmPlacePoint[] = [
   { osmId: "636880556", name: "Кафе «Чибис»", coords: [49.9261349, 82.5760233], address: "улица Логвина, 1/1" },
   { osmId: "636880560", name: "Кафе «Береке»", coords: [49.9293368, 82.6089215], address: "улица Жибек Жолы, 1 к2" },
@@ -322,4 +374,5 @@ export const additionalPlaces: Place[] = [
   ...createPlaces("leisure", leisurePoints),
   ...createPlaces("entertainment", marketPoints),
   ...createPlaces("food", foodPoints),
+  ...createPlaces("entertainment", mallPoints, mallCopy),
 ];

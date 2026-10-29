@@ -147,7 +147,7 @@ export function FeedPage() {
   };
 
   return (
-    <div className="page-wrap">
+    <div className="page-wrap-wide">
       <PageHeader
         title={tr("Лента города")}
         description={tr("Личные находки жителей: свет, кофе, прогулки и маршруты. Читайте, сохраняйте, делитесь своим.")}
@@ -239,7 +239,7 @@ export function FeedPage() {
             ) : null}
           </div>
 
-          <div className="mt-4 space-y-5">
+          <div className="mt-4 grid gap-5 md:grid-cols-2 2xl:grid-cols-3">
             {!ready ? (
               <>
                 <PostCardSkeleton />

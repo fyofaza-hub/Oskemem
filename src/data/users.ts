@@ -2,6 +2,20 @@ import type { CategoryId, User } from "@/types";
 
 export const seedUsers: User[] = [
   {
+    id: "u-admin",
+    name: "Главный администратор",
+    username: "admin",
+    email: "admin@oskemen.culture",
+    bio: "Фиксированная учётная запись администратора Oskemen Culture.",
+    city: "Өскемен",
+    joinedAt: "2026-01-01",
+    avatarColor: "linear-gradient(135deg, #FF6B35 0%, #C14A1C 100%)",
+    interests: ["culture", "landmark"],
+    role: "admin",
+    isFixed: true,
+    isOnboarded: true,
+  },
+  {
     id: "u-alina",
     name: "Алина Смагулова",
     username: "alina.oskemen",

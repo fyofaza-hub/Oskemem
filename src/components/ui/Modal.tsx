@@ -94,7 +94,7 @@ export function Modal({
   return createPortal(
     <AnimatePresence>
       {open ? (
-        <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center sm:p-6">
+        <div className="fixed inset-0 z-[170] flex items-end justify-center sm:items-center sm:p-6">
           <motion.div
             aria-hidden="true"
             className="absolute inset-0 bg-scrim/55 backdrop-blur-[2px]"

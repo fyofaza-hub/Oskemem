@@ -1,9 +1,13 @@
 /** Строгая проверка и очистка пользовательского ввода (клиентский слой). */
 
-export const EMAIL_REGEX =
-  /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$/;
+/**
+ * Практичная email-валидация: local@domain.tld, TLD ≥ 2 символов.
+ * BY-дизайн мягче RFC: не режем валидные_uidрицательные адреса (два дефиса,
+ * поддомены, плюс-теги), но отсекаем пробелы и отсутствие точки в домене.
+ */
+export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
 
-export const isValidEmail = (value: string): boolean => EMAIL_REGEX.test(value.trim());
+export const isValidEmail = (value: string): boolean => EMAIL_REGEX.test((value ?? "").trim());
 
 /** Пароль: только латиница, цифры и стандартные символы, минимум 8. */
 export const PASSWORD_REGEX = /^[A-Za-z0-9!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]+$/;

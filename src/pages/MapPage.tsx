@@ -36,6 +36,16 @@ export function MapPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [markMode, setMarkMode] = useState(false);
   const [addCoords, setAddCoords] = useState<[number, number] | null>(null);
+  const [mapFullscreen, setMapFullscreen] = useState(false);
+
+  useEffect(() => {
+    if (!mapFullscreen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMapFullscreen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mapFullscreen]);
   const ready = useDelayedReady(300);
 
   const addRequested = searchParams.get("add") === "1";
@@ -449,7 +459,12 @@ export function MapPage() {
           <div className="relative order-1 min-w-0 lg:order-2">
             <div
               id="map-canvas"
-              className="relative h-[52svh] min-h-[360px] lg:h-[calc(100svh-190px)] lg:min-h-[600px] lg:max-h-[820px]"
+              data-tour="map-canvas"
+              className={
+                mapFullscreen
+                  ? "relative fixed inset-0 z-[120] h-full w-full"
+                  : "relative h-[52svh] min-h-[360px] lg:h-[calc(100svh-190px)] lg:min-h-[600px] lg:max-h-[820px]"
+              }
             >
               {mode === "routes" && activeRoute ? (
                 <MapView
@@ -514,6 +529,15 @@ export function MapPage() {
                   {tr("Отметить точку")}
                 </Button>
               ) : null}
+
+              <IconButton
+                icon="fullscreen"
+                label={mapFullscreen ? tr("Свернуть карту") : tr("Карта на весь экран")}
+                variant="bordered"
+                onClick={() => setMapFullscreen((value) => !value)}
+                className="absolute right-3 z-[65] shadow-card"
+                style={{ top: mode === "places" ? "6rem" : "0.75rem" }}
+              />
 
               {markMode ? (
                 <div className="pointer-events-none absolute inset-x-3 bottom-3 z-[65] flex justify-center">

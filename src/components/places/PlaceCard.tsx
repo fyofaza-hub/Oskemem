@@ -6,6 +6,7 @@ import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { cn, priceLabel } from "@/lib/utils";
 import { track } from "@/lib/analytics";
 import { tr } from "@/i18n/runtime";
+import { onboardingGate } from "@/components/onboarding/Onboarding";
 import { categoryMap } from "@/data/categories";
 import { CategoryIcon } from "@/components/ui/Category";
 import { Icon } from "@/components/ui/Icon";
@@ -26,6 +27,7 @@ interface PlaceCardProps {
 export function PlaceCard({ place, onOpen, variant = "default", index }: PlaceCardProps) {
   const { favorites, toggleFavorite, draft, addPlaceToDraft } = useApp();
   const { toast } = useToast();
+  
   const requireAuth = useRequireAuth();
   const navigate = useNavigate();
   const favorite = favorites.includes(place.id);
@@ -34,6 +36,7 @@ export function PlaceCard({ place, onOpen, variant = "default", index }: PlaceCa
 
   const handleFavorite = () => {
     requireAuth(() => {
+      if (!onboardingGate.gate()) return;
       toggleFavorite(place.id);
       track("place_favorite", { place_id: place.id, saved: !favorite });
       toast({
@@ -46,6 +49,7 @@ export function PlaceCard({ place, onOpen, variant = "default", index }: PlaceCa
 
   const handleAddRoute = () => {
     requireAuth(() => {
+      if (!onboardingGate.gate()) return;
       const result = addPlaceToDraft(place.id);
       if (result === "exists") {
         toast({ title: tr("Место уже в маршруте"), description: tr("Откройте конструктор, чтобы изменить порядок."), variant: "info" });

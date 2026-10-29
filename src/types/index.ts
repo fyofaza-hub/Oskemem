@@ -71,6 +71,12 @@ export interface User {
   demo?: boolean;
   role?: "user" | "admin";
   banned?: boolean;
+  /** Прошёл ли пользователь интерактивное обучение. Для новых аккаунтов — false. */
+  isOnboarded?: boolean;
+  /** Неудаляемый системный аккаунт (фиксированный администратор). */
+  isFixed?: boolean;
+  /** Аккаунт зеркалится из Supabase Auth (Google и т.п.). */
+  isSupabase?: boolean;
 }
 
 export interface Comment {

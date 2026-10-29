@@ -27,6 +27,8 @@ import { seedPosts } from "@/data/posts";
 import { seedRoutes } from "@/data/routes";
 import { demoAccount, defaultInterests, seedUsers } from "@/data/users";
 import { addMinutes, cartesianRoute, normalize, uid } from "@/lib/utils";
+import { randomSalt, sha256Hex, isLegacyPassword } from "@/lib/security";
+import { supabaseConfigured, pushUserDataChange, type UserDataKind } from "@/lib/supabase";
 import { isValidEmail, isValidPassword, sanitizeText } from "@/lib/validation";
 import { tr } from "@/i18n/runtime";
 import {
@@ -42,7 +44,15 @@ const STATE_VERSION = 3;
 
 interface Account {
   email: string;
-  password: string;
+  /** Хэш актуального формата: sha256(salt + пароль). */
+  passwordHash?: string;
+  salt?: string;
+  /**
+   * Пароль старых аккаунтов (до внедрения хэширования). Поля нельзя считать
+   * безопасным хранением: при первом же успешном входе/миграции значение
+   * заменяется на hash+salt, поэтому дольше жизни сессии не живёт.
+   */
+  password?: string;
   userId: string;
 }
 
@@ -60,6 +70,8 @@ interface StoreState {
   savedEvents: Record<string, string[]>;
   draft: RouteDraft | null;
   siteSettings: SiteSettings;
+  /** Переопределения обложек seed-мест из админки (не касаясь массивов сидов). */
+  placeImageOverrides: Record<string, string>;
 }
 
 interface ActionResult {
@@ -87,6 +99,11 @@ interface AppContextValue {
   users: User[];
   currentUser: User | null;
   profileUser: User | null;
+  /** Доступ к интерактиву открыт: обучение пройдено/пропущено (профиль + localStorage). */
+  onboarded: boolean;
+  completeOnboarding: () => void;
+  /** Google-сессия: создаст/уберёт зеркало профиля и переключит пользователя. */
+  setSupabaseUser: (user: import("@/types").User | null) => void;
   places: Place[];
   placeMap: Record<string, Place>;
   posts: Post[];
@@ -98,9 +115,10 @@ interface AppContextValue {
   savedEventIds: string[];
   draft: RouteDraft | null;
   siteSettings: SiteSettings;
+  placeImageOverrides: Record<string, string>;
   isAdmin: boolean;
-  login: (email: string, password: string) => AuthResult;
-  register: (name: string, email: string, password: string) => AuthResult;
+  login: (email: string, password: string) => Promise<AuthResult>;
+  register: (name: string, email: string, password: string) => Promise<AuthResult>;
   logout: () => void;
   updateProfile: (update: ProfileUpdate) => ActionResult;
   toggleFavorite: (placeId: string) => void;
@@ -112,6 +130,8 @@ interface AppContextValue {
   createPost: (input: CreatePostInput) => Post | null;
   addPlace: (input: PlaceInput) => AddPlaceResult;
   deletePlace: (placeId: string) => ActionResult;
+  /** Замена обложки места (админ-инструмент Шаг 2): dataURL локально или публичный URL из Storage. */
+  setPlaceImage: (placeId: string, image: string) => ActionResult;
   getUser: (id: string) => User | undefined;
   getRoute: (id: string) => Route | undefined;
   startDraft: (placeIds?: string[], options?: { title?: string; description?: string }) => void;
@@ -126,6 +146,7 @@ interface AppContextValue {
   resetDemo: () => void;
   approvePost: (postId: string) => void;
   rejectPost: (postId: string) => void;
+  moderatePosts: (ids: string[], action: "approve" | "reject") => void;
   deletePost: (postId: string) => void;
   setUserRole: (userId: string, role: "user" | "admin") => void;
   banUser: (userId: string, banned: boolean) => void;
@@ -140,6 +161,14 @@ const createInitialState = (): StoreState => ({
       email: demoAccount.email,
       password: demoAccount.password,
       userId: "u-alina",
+    },
+    {
+      // Фиксированный администратор: email/пароль прописаны в ТЗ и миграции
+      // supabase/001_admin_roles_storage.sql. При первом старте миграция
+      // хэширует пароль (salt+sha256), при сбросе данных аккаунт восстанавливается.
+      email: "admin@oskemen.culture",
+      password: "SuperAdmin2026Password!",
+      userId: "u-admin",
     },
   ],
   currentUserId: "u-alina",
@@ -164,6 +193,7 @@ const createInitialState = (): StoreState => ({
     maintenanceMode: false,
     postingEnabled: true,
   },
+  placeImageOverrides: {},
 });
 
 const loadState = (): StoreState => {
@@ -187,6 +217,7 @@ const loadState = (): StoreState => {
       savedEvents: parsed.savedEvents ?? {},
       draft: parsed.draft ?? null,
       siteSettings: parsed.siteSettings ?? createInitialState().siteSettings,
+      placeImageOverrides: parsed.placeImageOverrides ?? {},
     };
   } catch {
     return createInitialState();
@@ -199,6 +230,23 @@ const seedPostIds = new Set(seedPosts.map((post) => post.id));
 const seedUserIds = new Set(seedUsers.map((user) => user.id));
 
 const ensureList = (record: Record<string, string[]>, userId: string) => record[userId] ?? [];
+
+/** Пользователь текущей сессии пришёл из Supabase Auth (Google)? */
+const currentUserIdIsSupabase = (state: StoreState): boolean => {
+  const user = state.users.find((item) => item.id === state.currentUserId);
+  return Boolean(user?.isSupabase) && supabaseConfigured;
+};
+
+/** Пуш изменения пользовательских данных в Supabase (США-совместимость best-effort). */
+const maybePushUserChange = (
+  state: StoreState,
+  kind: UserDataKind,
+  rowId: string,
+  isAdd: boolean,
+): void => {
+  if (!state.currentUserId) return;
+  void pushUserDataChange(kind, state.currentUserId, rowId, isAdd ? "add" : "remove");
+};
 
 const toggleInList = (list: string[], id: string) =>
   list.includes(id) ? list.filter((item) => item !== id) : [id, ...list];
@@ -213,6 +261,35 @@ const palette = [
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<StoreState>(loadState);
+
+  // Разовая миграция: у легаси-аккаунтов открытый пароль заменяется на salt+hash.
+  useEffect(() => {
+    const legacy = state.accounts.filter((account) => !account.passwordHash && isLegacyPassword(account.password));
+    if (!legacy.length) return;
+    let cancelled = false;
+    void (async () => {
+      const upgraded = await Promise.all(
+        legacy.map(async (account) => {
+          const salt = randomSalt();
+          const passwordHash = await sha256Hex(salt + (account.password ?? ""));
+          return { email: account.email, salt, passwordHash };
+        }),
+      );
+      if (cancelled) return;
+      setState((prev) => ({
+        ...prev,
+        accounts: prev.accounts.map((account) => {
+          const found = upgraded.find((item) => item.email === account.email);
+          return found && !account.passwordHash
+            ? { ...account, salt: found.salt, passwordHash: found.passwordHash, password: undefined }
+            : account;
+        }),
+      }));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [state.accounts]);
 
   useEffect(() => {
     try {
@@ -237,10 +314,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [rawCurrentUser, users],
   );
 
-  const places = useMemo(
-    () => [...state.customPlaces, ...seedPlaces.map(localizePlace)],
-    [state.customPlaces],
-  );
+  const places = useMemo(() => {
+    const overrides = state.placeImageOverrides;
+    if (!Object.keys(overrides).length) {
+      return [...state.customPlaces, ...seedPlaces.map(localizePlace)];
+    }
+    // Замена фото из админки применяется мгновенно ко всем разделам:
+    // гид, карта, лента и главная получают новую обложку по place.id.
+    return [...state.customPlaces, ...seedPlaces.map((place) => {
+      const localized = localizePlace(place);
+      const override = overrides[localized.id];
+      return override ? { ...localized, image: override } : localized;
+    })];
+  }, [state.customPlaces, state.placeImageOverrides]);
 
   const placeMap = useMemo(
     () =>
@@ -271,81 +357,143 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [routes],
   );
 
-  const login = useCallback(
-    (email: string, password: string): AuthResult => {
-      const cleanEmail = sanitizeText(email);
-      if (!isValidEmail(cleanEmail)) {
-        return { ok: false, error: tr("Проверьте формат почты") };
-      }
-      if (!isValidPassword(password)) {
-        return { ok: false, error: tr("Пароль должен содержать только латиницу, цифры и символы, минимум 8 символов") };
-      }
-      const normalizedEmail = normalize(cleanEmail);
-      const account = state.accounts.find(
-        (item) => normalize(item.email) === normalizedEmail,
-      );
-      if (!account) {
-        return { ok: false, error: tr("Аккаунт с такой почтой не найден") };
-      }
-      if (account.password !== password) {
-        return { ok: false, error: tr("Неверный пароль") };
-      }
-      const user = state.users.find((item) => item.id === account.userId);
-      if (!user) return { ok: false, error: tr("Профиль не найден") };
-      if (user.banned) return { ok: false, error: tr("Аккаунт заблокирован") };
-      setState((prev) => ({ ...prev, currentUserId: user.id }));
-      return { ok: true, user };
-    },
-    [state.accounts, state.users],
-  );
+  const login = useCallback(async (email: string, password: string): Promise<AuthResult> => {
+    const cleanEmail = sanitizeText(email);
+    if (!isValidEmail(cleanEmail)) {
+      return { ok: false, error: tr("Проверьте формат почты") };
+    }
+    if (!isValidPassword(password)) {
+      return { ok: false, error: tr("Пароль должен содержать только латиницу, цифры и символы, минимум 8 символов") };
+    }
+    const normalizedEmail = normalize(cleanEmail);
+    const account = state.accounts.find(
+      (item) => normalize(item.email) === normalizedEmail,
+    );
+    if (!account) {
+      return { ok: false, error: tr("Аккаунт с такой почтой не найден") };
+    }
+    // Хэш-аккаунт: sha256(salt + пароль). Легаси: сравнение в открытом виде, но
+    // при первом же успешном входе пароль немедленно заменяется на хэш.
+    let passwordMatch = false;
+    if (account.passwordHash && account.salt) {
+      passwordMatch = (await sha256Hex(account.salt + password)) === account.passwordHash;
+    } else if (isLegacyPassword(account.password)) {
+      passwordMatch = account.password === password;
+    } else {
+      return { ok: false, error: tr("Неверный пароль") };
+    }
+    if (!passwordMatch) {
+      return { ok: false, error: tr("Неверный пароль") };
+    }
+    const user = state.users.find((item) => item.id === account.userId);
+    if (!user) return { ok: false, error: tr("Профиль не найден") };
+    if (user.banned) return { ok: false, error: tr("Аккаунт заблокирован") };
 
-  const register = useCallback(
-    (name: string, email: string, password: string): AuthResult => {
-      const trimmedName = sanitizeText(name);
-      const cleanEmail = sanitizeText(email);
-      if (trimmedName.length < 2) return { ok: false, error: tr("Укажите имя") };
-      if (!isValidEmail(cleanEmail)) {
-        return { ok: false, error: tr("Проверьте формат почты") };
-      }
-      if (!isValidPassword(password)) {
-        return { ok: false, error: tr("Пароль должен содержать только латиницу, цифры и символы, минимум 8 символов") };
-      }
-      const normalizedEmail = normalize(cleanEmail);
-      if (state.accounts.some((account) => normalize(account.email) === normalizedEmail)) {
-        return { ok: false, error: tr("Эта почта уже зарегистрирована") };
-      }
-      const baseUsername = normalizedEmail.split("@")[0].replace(/[^a-z0-9._-]/g, "") || "user";
-      let username = baseUsername;
-      let counter = 1;
-      while (state.users.some((user) => user.username === username)) {
-        username = `${baseUsername}${counter}`;
-        counter += 1;
-      }
-      const newUser: User = {
-        id: uid("u"),
-        name: trimmedName,
-        username,
-        email: cleanEmail,
-        bio: tr("Новый участник Oskemen Culture."),
-        city: tr("Өскемен"),
-        joinedAt: new Date().toISOString(),
-        avatarColor: palette[state.users.length % palette.length],
-        interests: defaultInterests,
-        role: "user",
-      };
+    // Апгрейд легаси-аккаунта до hash-формата сразу после успешного входа.
+    if (!account.passwordHash || !account.salt) {
+      const salt = randomSalt();
+      const passwordHash = await sha256Hex(salt + password);
       setState((prev) => ({
         ...prev,
-        users: [...prev.users, newUser],
-        accounts: [...prev.accounts, { email: cleanEmail, password, userId: newUser.id }],
-        currentUserId: newUser.id,
+        accounts: prev.accounts.map((item) =>
+          item.email === account.email ? { ...item, passwordHash, salt, password: undefined } : item,
+        ),
       }));
-      return { ok: true, user: newUser };
-    },
-    [state.accounts, state.users],
-  );
+    }
+
+    setState((prev) => ({ ...prev, currentUserId: user.id }));
+    return { ok: true, user };
+  }, [state.accounts, state.users]);
+
+  const register = useCallback(async (name: string, email: string, password: string): Promise<AuthResult> => {
+    const trimmedName = sanitizeText(name);
+    const cleanEmail = sanitizeText(email);
+    if (trimmedName.length < 2) return { ok: false, error: tr("Укажите имя") };
+    if (!isValidEmail(cleanEmail)) {
+      return { ok: false, error: tr("Проверьте формат почты") };
+    }
+    if (!isValidPassword(password)) {
+      return { ok: false, error: tr("Пароль должен содержать только латиницу, цифры и символы, минимум 8 символов") };
+    }
+    const normalizedEmail = normalize(cleanEmail);
+    if (state.accounts.some((account) => normalize(account.email) === normalizedEmail)) {
+      return { ok: false, error: tr("Эта почта уже зарегистрирована") };
+    }
+    const baseUsername = normalizedEmail.split("@")[0].replace(/[^a-z0-9._-]/g, "") || "user";
+    let username = baseUsername;
+    let counter = 1;
+    while (state.users.some((user) => user.username === username)) {
+      username = `${baseUsername}${counter}`;
+      counter += 1;
+    }
+    const salt = randomSalt();
+    const passwordHash = await sha256Hex(salt + password);
+    const newUser: User = {
+      id: uid("u"),
+      name: trimmedName,
+      username,
+      email: cleanEmail,
+      bio: tr("Новый участник Oskemen Culture."),
+      city: tr("Өскемен"),
+      joinedAt: new Date().toISOString(),
+      avatarColor: palette[state.users.length % palette.length],
+      interests: defaultInterests,
+      role: "user",
+      isOnboarded: false,
+    };
+    setState((prev) => ({
+      ...prev,
+      users: [...prev.users, newUser],
+      accounts: [
+        ...prev.accounts,
+        { email: cleanEmail, passwordHash, salt, userId: newUser.id },
+      ],
+      currentUserId: newUser.id,
+    }));
+    return { ok: true, user: newUser };
+  }, [state.accounts, state.users]);
 
   const logout = useCallback(() => {
     setState((prev) => ({ ...prev, currentUserId: null }));
+  }, []);
+
+  /** Пользователь прошёл или пропустил обучение — открыть интерактив (профиль + localStorage). */
+  const completeOnboarding = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      users: prev.users.map((user) =>
+        user.id === prev.currentUserId ? { ...user, isOnboarded: true } : user,
+      ),
+    }));
+  }, []);
+
+  /**
+   * Шаг 1: Google-сессия → профиль приложения.
+   * • профиль Google-пользователя зеркалируется в users[] (единая модель),
+   * • после редиректа шапка сразу меняет «Войти» на аватар,
+   * • выход из Google освобождает текущего пользователя.
+   */
+  const setSupabaseUser = useCallback((user: import("@/types").User | null): void => {
+    setState((prev) => {
+      if (!user) {
+        const wasSupabase = prev.users.find(
+          (item) => item.id === prev.currentUserId && item.isSupabase,
+        );
+        return wasSupabase ? { ...prev, currentUserId: null } : prev;
+      }
+      const existing = prev.users.find((item) => item.id === user.id);
+      const mirror: User = existing
+        // Повторный вход: обновляем только меняющиеся Google-поля
+        ? { ...existing, name: user.name, avatar: user.avatar, isSupabase: true }
+        : { ...user, isSupabase: true };
+      return {
+        ...prev,
+        users: existing
+          ? prev.users.map((item) => (item.id === user.id ? mirror : item))
+          : [...prev.users, mirror],
+        currentUserId: user.id,
+      };
+    });
   }, []);
 
   const updateProfile = useCallback(
@@ -391,6 +539,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setState((prev) => {
       if (!prev.currentUserId) return prev;
       const current = ensureList(prev.favorites, prev.currentUserId);
+      if (currentUserIdIsSupabase(prev)) {
+        void maybePushUserChange(prev, "favorites", placeId, !current.includes(placeId));
+      }
       return {
         ...prev,
         favorites: {
@@ -797,6 +948,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const isAdmin = currentUser?.role === "admin";
+  const onboarded = currentUser ? currentUser.isOnboarded !== false : true;
 
   const approvePost = useCallback((postId: string) => {
     setState((prev) => ({
@@ -812,6 +964,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  /** Массовая модерация для админ-панели: одобрить или отклонить набор постов. */
+  const moderatePosts = useCallback((ids: string[], action: "approve" | "reject") => {
+    const set = new Set(ids);
+    setState((prev) => ({
+      ...prev,
+      posts: prev.posts.map((post) => (set.has(post.id) ? { ...post, approved: action === "approve" } : post)),
+    }));
+  }, []);
+
   const deletePost = useCallback((postId: string) => {
     setState((prev) => ({ ...prev, posts: prev.posts.filter((post) => post.id !== postId) }));
   }, []);
@@ -819,14 +980,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const setUserRole = useCallback((userId: string, role: "user" | "admin") => {
     setState((prev) => ({
       ...prev,
-      users: prev.users.map((user) => (user.id === userId ? { ...user, role } : user)),
+      users: prev.users.map((user) => {
+        // Фиксированный администратор не теряет роль никогда
+        if (user.id === userId && user.isFixed) return user;
+        return user.id === userId ? { ...user, role } : user;
+      }),
     }));
   }, []);
 
   const banUser = useCallback((userId: string, banned: boolean) => {
     setState((prev) => ({
       ...prev,
-      users: prev.users.map((user) => (user.id === userId ? { ...user, banned } : user)),
+      users: prev.users.map((user) => {
+        // Фиксированный администратор не может быть заблокирован
+        if (user.id === userId && user.isFixed) return user;
+        return user.id === userId ? { ...user, banned } : user;
+      }),
     }));
   }, []);
 
@@ -837,22 +1006,42 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  /** Шаг 2: замена обложки места с мгновенным эффектом во всех разделах. */
+  const setPlaceImage = useCallback((placeId: string, image: string): ActionResult => {
+    if (!image) return { ok: false, error: tr("Изображение пустое") };
+    let isSeed = false;
+    setState((prev) => {
+      isSeed = state.customPlaces.some((place) => place.id === placeId);
+      return {
+        ...prev,
+        // Сид-места хранятся локализуемыми, поэтому обложку правим оверрайдом
+        placeImageOverrides: { ...prev.placeImageOverrides, [placeId]: image },
+      };
+    });
+    void isSeed;
+    return { ok: true };
+  }, []);
+
   const contextValue = useMemo<AppContextValue>(
     () => ({
       users,
       currentUser,
       profileUser: rawCurrentUser,
+      onboarded,
+      completeOnboarding,
+      setSupabaseUser,
       places,
       placeMap,
-      posts,
       routes,
       events,
       favorites: currentUser ? ensureList(state.favorites, currentUser.id) : [],
+      posts,
       savedPostIds: currentUser ? ensureList(state.savedPosts, currentUser.id) : [],
       savedRouteIds: currentUser ? ensureList(state.savedRoutes, currentUser.id) : [],
       savedEventIds: currentUser ? ensureList(state.savedEvents, currentUser.id) : [],
       draft: state.draft,
       siteSettings: state.siteSettings,
+      placeImageOverrides: state.placeImageOverrides,
       isAdmin,
       login,
       register,
@@ -867,6 +1056,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       createPost,
       addPlace,
       deletePlace,
+      setPlaceImage,
       getUser,
       getRoute,
       startDraft,
@@ -881,6 +1071,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       resetDemo,
       approvePost,
       rejectPost,
+      moderatePosts,
       deletePost,
       setUserRole,
       banUser,
@@ -895,13 +1086,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
       createPost,
       currentUser,
       deletePlace,
+      setPlaceImage,
+      onboarded,
+      completeOnboarding,
       events,
       getUser,
       getRoute,
       login,
       logout,
+      moderatePosts,
       placeMap,
       places,
+      setPlaceImage,
       posts,
       rawCurrentUser,
       register,

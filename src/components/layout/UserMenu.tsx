@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { tr } from "@/i18n/runtime";
 import { Avatar } from "@/components/ui/Avatar";
 import { Icon, type IconName } from "@/components/ui/Icon";
+import { requestTour } from "@/components/onboarding/Onboarding";
 
 const itemClass =
   "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
@@ -96,6 +97,24 @@ export function UserMenu() {
               </MenuLink>
             </div>
             <div className="border-t border-line py-1.5">
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  requestTour();
+                  close();
+                  navigate("/");
+                  toast({
+                    title: tr("Обучение запущено"),
+                    description: tr("Пройдите шаги — в любой момент можно остановить."),
+                    variant: "info",
+                  });
+                }}
+                className={cn(itemClass, "text-fg hover:bg-sunken")}
+              >
+                <Icon name="guide" size={17} className="text-muted" />
+                {tr("Пройти обучение заново")}
+              </button>
               <button
                 type="button"
                 role="menuitem"

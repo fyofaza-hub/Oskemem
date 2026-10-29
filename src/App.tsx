@@ -1,7 +1,9 @@
 import { lazy, Suspense, type ReactNode } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { OnboardingTour } from "@/components/onboarding/Onboarding";
 import { AppShell } from "@/components/layout/AppShell";
+import { SupabaseSessionSync } from "@/auth/SupabaseSession";
 import { PageLoader } from "@/components/ui/PageLoader";
 import { AppProvider } from "@/context/AppContext";
 import { LanguageProvider } from "@/i18n/LanguageContext";
@@ -47,7 +49,9 @@ export default function App() {
           <BrowserRouter>
             <ToastProvider>
               <AppProvider>
-                <Routes>
+                <SupabaseSessionSync />
+                <OnboardingTour>
+                  <Routes>
                   <Route path="/auth" element={route(<AuthPage />)} />
                   <Route element={<AppShell />}>
                     <Route index element={route(<HomePage />)} />
@@ -65,6 +69,7 @@ export default function App() {
                     <Route path="*" element={route(<NotFoundPage />)} />
                   </Route>
                 </Routes>
+                </OnboardingTour>
               </AppProvider>
             </ToastProvider>
           </BrowserRouter>

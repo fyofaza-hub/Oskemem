@@ -9,12 +9,14 @@ interface PageHeaderProps {
   description?: string;
   actions?: ReactNode;
   className?: string;
+  /** data-tour для онбординга: подсветка шапки раздела в обучающем туре. */
+  dataTour?: string;
 }
 
 /** Единый заголовок страницы: название, короткое пояснение и действия справа. */
-export function PageHeader({ title, description, actions, className }: PageHeaderProps) {
+export function PageHeader({ title, description, actions, className, dataTour }: PageHeaderProps) {
   return (
-    <header className={cn("flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-6", className)}>
+    <header data-tour={dataTour} className={cn("flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-6", className)}>
       <div className="min-w-0 max-w-2xl">
         <h1 className="page-title">{title}</h1>
         {description ? <p className="mt-2 text-[15px] leading-relaxed text-muted">{description}</p> : null}

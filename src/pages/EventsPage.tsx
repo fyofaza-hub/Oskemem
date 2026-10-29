@@ -121,6 +121,7 @@ export function EventsPage() {
   return (
     <div className="page-wrap">
       <PageHeader
+        dataTour="events"
         title={tr("Афиша города")}
         description={tr("События Өскемена на ближайшие недели: вечера в музее, музыка у воды, маркеты и премьеры.")}
         actions={

@@ -5,13 +5,16 @@ import { demoAccount } from "@/data/users";
 import { useApp } from "@/context/AppContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useToast } from "@/context/ToastContext";
-import { track } from "@/lib/analytics";
+import { isValidEmail } from "@/lib/validation";
+import { getSupabaseClient, supabaseConfigured, signInWithGoogle } from "@/lib/supabase";
 import { tr } from "@/i18n/runtime";
 import { Logo } from "@/components/ui/Logo";
 import { Button, ButtonLink, IconButton } from "@/components/ui/Button";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { Field, Input } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
+import { requestTour } from "@/components/onboarding/Onboarding";
+import { track } from "@/lib/analytics";
 
 type AuthMode = "login" | "register";
 
@@ -59,13 +62,15 @@ export function AuthPage() {
     });
     if (!isLogin) {
       // После регистрации сразу открываем раздел «Навигация по сайту» с обучением
+      // и закладываем флаг: на главной стартует интерактивный тур по разделам.
+      requestTour();
       navigate("/navigation", { replace: true, state: { welcome: true } });
       return;
     }
     navigate(target, { replace: true });
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
 
@@ -77,7 +82,7 @@ export function AuthPage() {
       setError(tr("Введите почту"));
       return;
     }
-    if (!/^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$/.test(email.trim())) {
+    if (!isValidEmail(email)) {
       setError(tr("Проверьте формат почты"));
       return;
     }
@@ -86,7 +91,7 @@ export function AuthPage() {
       return;
     }
 
-    const result = mode === "login" ? login(email, password) : register(name, email, password);
+    const result = mode === "login" ? await login(email, password) : await register(name, email, password);
     if (!result.ok) {
       setError(result.error ?? tr("Не удалось выполнить действие"));
       return;
@@ -95,10 +100,10 @@ export function AuthPage() {
     finish(mode === "login");
   };
 
-  const handleDemo = () => {
+  const handleDemo = async () => {
     setError("");
     setBusy(true);
-    const result = login(demoAccount.email, demoAccount.password);
+    const result = await login(demoAccount.email, demoAccount.password);
     setBusy(false);
     if (!result.ok) {
       setError(
@@ -334,6 +339,33 @@ export function AuthPage() {
                 <span className="text-meta text-faint">{tr("или")}</span>
                 <span className="h-px flex-1 bg-line" />
               </div>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  const result = await signInWithGoogle(target || window.location.origin + "/");
+                  if (result?.error) setError(result.error);
+                }}
+                disabled={!supabaseConfigured}
+                className="card flex w-full items-center gap-3 p-3.5 text-left transition-colors hover:border-line-strong hover:bg-sunken disabled:opacity-50"
+                title={supabaseConfigured ? tr("Google OAuth включён") : tr("Укажите VITE_SUPABASE_URL, чтобы включить")}
+              >
+                {/* Фирменный логотип Google (4 цвета) */}
+                <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true" className="shrink-0">
+                  <path fill="#FFC107" d="M43.6 20.1H24v7.9h11.3C33.7 33.4 29.3 36.5 24 36.5c-6.9 0-12.5-5.6-12.5-12.5S17.1 11.5 24 11.5c3.2 0 6.1 1.2 8.3 3.2l5.7-5.7C34.5 5.6 29.5 3.5 24 3.5 12.7 3.5 3.5 12.7 3.5 24S12.7 44.5 24 44.5c11.2 0 19.5-8.1 19.5-20.5 0-1.3-.1-2.6-.4-3.9z"/>
+                  <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 14.1 19 11.5 24 11.5c3.2 0 6.1 1.2 8.3 3.2l5.7-5.7C34.5 5.6 29.5 3.5 24 3.5 16.3 3.5 9.7 8 6.3 14.7z"/>
+                  <path fill="#4CAF50" d="M24 44.5c5.4 0 10.4-2.1 14.1-5.5l-6.5-5.5C29.5 35.4 26.9 36.5 24 36.5c-5.2 0-9.6-3.1-11.2-7.5l-6.6 5.1C9.7 40.3 16.3 44.5 24 44.5z"/>
+                  <path fill="#1976D2" d="M43.1 20.1H24v7.9h11.3c-.5 2.9-2 5.3-4.2 7l6.5 5.5c3.7-3.4 5.9-8.6 5.9-14.7 0-2-.3-3.9-.4-5.6z"/>
+                </svg>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium text-fg">{tr("Войти через Google")}</span>
+                  <span className="mt-0.5 block text-meta text-muted">
+                    {supabaseConfigured
+                      ? tr("Работает через Supabase Auth: профиль создастся автоматически.")
+                      : tr("Требуется настроить Supabase (см. VITE_SUPABASE_URL).")}
+                  </span>
+                </span>
+              </button>
 
               <button
                 type="button"

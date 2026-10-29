@@ -25,6 +25,7 @@ import { PlaceDetail } from "@/components/places/PlaceDetail";
 import { RouteCard } from "@/components/routes/RouteCard";
 import { EventCard } from "@/components/events/EventCard";
 import { EventDetailModal } from "@/components/events/EventDetailModal";
+import { requestTour } from "@/components/onboarding/Onboarding";
 
 type ProfileTab = "posts" | "routes" | "favorites" | "saved" | "settings";
 
@@ -346,7 +347,7 @@ export function ProfilePage() {
           {activeTab === "favorites" ? (
             favoritePlaces.length ? (
               <>
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-2" data-tour="favorites">
                   <p className="text-sm text-muted">
                     {pluralizePlaces(favoritePlaces.length)} · {tr("сохраняются локально")}
                   </p>
@@ -586,6 +587,21 @@ export function ProfilePage() {
                   </Button>
                   <Button variant="secondary" onClick={() => setTab("posts")}>
                     {tr("Отмена")}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    icon="guide"
+                    onClick={() => {
+                      requestTour();
+                      navigate("/");
+                      toast({
+                        title: tr("Обучение запущено"),
+                        description: tr("Пройдите шаги — в любой момент можно остановить."),
+                        variant: "info",
+                      });
+                    }}
+                  >
+                    {tr("Пройти обучение заново")}
                   </Button>
                 </div>
                 <p className="mt-3 flex items-center gap-1.5 text-meta text-muted">

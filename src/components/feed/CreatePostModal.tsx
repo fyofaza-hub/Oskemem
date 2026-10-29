@@ -5,6 +5,7 @@ import { useApp } from "@/context/AppContext";
 import { useToast } from "@/context/ToastContext";
 import { compressImage, validateImageFile } from "@/lib/utils";
 import { tr } from "@/i18n/runtime";
+import { onboardingGate } from "@/components/onboarding/Onboarding";
 import { Modal } from "@/components/ui/Modal";
 import { Button, IconButton } from "@/components/ui/Button";
 import { Field, Input, Select, Textarea } from "@/components/ui/Field";
@@ -20,6 +21,7 @@ interface CreatePostModalProps {
 
 export function CreatePostModal({ open, onClose, onCreated, initialPlaceId }: CreatePostModalProps) {
   const { createPost, currentUser, places } = useApp();
+  
   const { toast } = useToast();
   const [placeId, setPlaceId] = useState(initialPlaceId ?? places[0].id);
   const [title, setTitle] = useState("");
@@ -71,6 +73,9 @@ export function CreatePostModal({ open, onClose, onCreated, initialPlaceId }: Cr
         description: tr("Текст публикации — минимум 10 символов."),
         variant: "error",
       });
+      return;
+    }
+    if (!onboardingGate.gate()) {
       return;
     }
     const post = createPost({

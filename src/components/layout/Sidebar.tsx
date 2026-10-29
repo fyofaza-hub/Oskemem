@@ -57,13 +57,13 @@ export function Sidebar() {
         to={item.to}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "flex h-10 items-center gap-2.5 rounded-xl px-3 text-[13px] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+          "flex h-11 items-center gap-3 rounded-xl px-3.5 text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
           active
             ? "bg-accent-soft text-accent-ink ring-1 ring-inset ring-accent/20"
             : "text-muted hover:bg-sunken hover:text-fg",
         )}
       >
-        <Icon name={item.icon} size={18} />
+        <Icon name={item.icon} size={19} />
         <span className="truncate">{item.label}</span>
       </Link>
     );
@@ -78,10 +78,10 @@ export function Sidebar() {
       <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-3 py-2" aria-label={tr("Основная навигация")}>
         <p className="section-label pt-1">{tr("Разделы")}</p>
         {primaryNav.map(renderItem)}
-        <div className="my-3 border-t border-line" />
+        <div className="my-4 border-t border-line" />
         <p className="section-label">{tr("Личное")}</p>
         {personalNav.map(renderItem)}
-        <div className="my-3 border-t border-line" />
+        <div className="my-4 border-t border-line" />
         <p className="section-label">{tr("Помощь")}</p>
         {helpNav.map(renderItem)}
         {isAdmin ? (
@@ -89,11 +89,11 @@ export function Sidebar() {
             to="/admin"
             aria-current={location.pathname === "/admin" ? "page" : undefined}
             className={cn(
-              "flex h-10 items-center gap-2.5 rounded-xl px-3 text-[13px] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+              "flex h-11 items-center gap-3 rounded-xl px-3.5 text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
               location.pathname === "/admin" ? "bg-accent-soft text-accent-ink" : "text-muted hover:bg-sunken hover:text-fg",
             )}
           >
-            <Icon name="shield" size={18} />
+            <Icon name="shield" size={19} />
             <span className="truncate">{tr("Админ-панель")}</span>
           </Link>
         ) : null}
