@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { cn } from "@/lib/utils";
-import { currentLanguage, tr } from "@/i18n/runtime";
+import { tr } from "@/i18n/runtime";
 import { IconButton } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/Bits";
 
@@ -154,16 +154,15 @@ export function MapView({
         touchZoom: interactive,
       });
       mapRef.current = map;
-      const mapLanguage = currentLanguage();
-      const tileLanguage = mapLanguage === "kk" ? "kk" : mapLanguage;
-      L.tileLayer(`https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png?lang=${tileLanguage}`, {
+      // Стандартные тайлы OpenStreetMap: maps.wikimedia.org больше не разрешает
+      // подключение со сторонних сайтов (403), из-за чего подложка не грузилась.
+      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors, <a href="https://foundation.wikimedia.org/wiki/Maps_Terms_of_Use" target="_blank" rel="noreferrer">Wikimedia Maps</a>',
+          '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
         maxZoom: 18,
         noWrap: true,
         bounds: L.latLngBounds([49.6, 82.2], [50.25, 83.1]),
         crossOrigin: true,
-        errorTileUrl: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
       }).addTo(map);
       L.control.zoom({ position: "bottomright" }).addTo(map);
 
