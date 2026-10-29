@@ -156,14 +156,34 @@ export function MapView({
       mapRef.current = map;
       // Стандартные тайлы OpenStreetMap: maps.wikimedia.org больше не разрешает
       // подключение со сторонних сайтов (403), из-за чего подложка не грузилась.
-      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
+      // Стабильность на любом устройстве: если основной провайдер недоступен
+      // (блокировка сети, лимиты, 403) — тайлы автоматически переключаются
+      // на запасной провайдер CARTO, который отдаёт те же данные OSM.
+      const baseAttribution =
+        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors';
+      const fallbackAttribution = `${baseAttribution} · &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>`;
+      const tileLayer = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: baseAttribution,
         maxZoom: 18,
         noWrap: true,
         bounds: L.latLngBounds([49.6, 82.2], [50.25, 83.1]),
-        crossOrigin: true,
       }).addTo(map);
+      let loadedTiles = 0;
+      let errorTiles = 0;
+      let fallbackActive = false;
+      tileLayer.on("tileload", () => {
+        loadedTiles += 1;
+      });
+      tileLayer.on("tileerror", () => {
+        errorTiles += 1;
+        // Подложка даже один раз не загрузилась — маршрут данных умер целиком.
+        if (!fallbackActive && loadedTiles === 0 && errorTiles >= 5) {
+          fallbackActive = true;
+          tileLayer.setUrl("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png", true);
+          map.attributionControl.removeAttribution(baseAttribution);
+          map.attributionControl.addAttribution(fallbackAttribution);
+        }
+      });
       L.control.zoom({ position: "bottomright" }).addTo(map);
 
       routeLayerRef.current = L.layerGroup().addTo(map);
