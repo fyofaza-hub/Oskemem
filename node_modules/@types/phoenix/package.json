@@ -1,0 +1,36 @@
+{
+    "name": "@types/phoenix",
+    "version": "1.6.8",
+    "description": "TypeScript definitions for phoenix",
+    "homepage": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/phoenix",
+    "license": "MIT",
+    "contributors": [
+        {
+            "name": "Mirosław Ciastek",
+            "githubUsername": "mciastek",
+            "url": "https://github.com/mciastek"
+        },
+        {
+            "name": "John Goff",
+            "githubUsername": "John-Goff",
+            "url": "https://github.com/John-Goff"
+        },
+        {
+            "name": "Po Chen",
+            "githubUsername": "princemaple",
+            "url": "https://github.com/princemaple"
+        }
+    ],
+    "main": "",
+    "types": "index.d.ts",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/DefinitelyTyped/DefinitelyTyped.git",
+        "directory": "types/phoenix"
+    },
+    "scripts": {},
+    "dependencies": {},
+    "peerDependencies": {},
+    "typesPublisherContentHash": "ab5e0b3a9d931439a6b90da482e1fb27c4ede77ab22cb27a0dd071dcf9fd3d2e",
+    "typeScriptVersion": "5.6"
+}
