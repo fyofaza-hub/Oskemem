@@ -7,12 +7,12 @@
   color-scheme: light;
   --canvas: 246 247 249;
   --surface: 255 255 255;
-  --sunken: 242 244 247;
-  --line: 229 232 237;
-  --line-strong: 208 213 222;
-  --fg: 17 20 27;
-  --fg-muted: 90 99 114;
-  --fg-faint: 128 137 151;
+  --sunken: 238 241 246;
+  --line: 205 212 224;
+  --line-strong: 176 186 204;
+  --fg: 15 20 28;
+  --fg-muted: 68 78 96;
+  --fg-faint: 96 106 124;
   --accent: 37 99 235;
   --accent-hover: 29 78 216;
   --accent-soft: 235 242 255;
@@ -262,6 +262,10 @@ img {
 
   .card-interactive {
     @apply transition-[border-color,box-shadow] duration-300 ease-smooth hover:border-line-strong hover:shadow-raised;
+  }
+
+  :root[data-theme="light"] .card {
+    box-shadow: 0 1px 3px rgb(15 23 42 / 0.08), 0 1px 2px rgb(15 23 42 / 0.05);
   }
 
   .badge {

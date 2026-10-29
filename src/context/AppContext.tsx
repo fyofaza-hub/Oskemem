@@ -18,6 +18,7 @@ import type {
   Route,
   RouteDraft,
   RouteStop,
+  SiteSettings,
   User,
 } from "@/types";
 import { places as seedPlaces } from "@/data/places";
@@ -26,6 +27,7 @@ import { seedPosts } from "@/data/posts";
 import { seedRoutes } from "@/data/routes";
 import { demoAccount, defaultInterests, seedUsers } from "@/data/users";
 import { addMinutes, cartesianRoute, normalize, uid } from "@/lib/utils";
+import { isValidEmail, isValidPassword, sanitizeText } from "@/lib/validation";
 import { tr } from "@/i18n/runtime";
 import {
   localizeEvent,
@@ -36,7 +38,7 @@ import {
 } from "@/i18n/content";
 
 const STORAGE_KEY = "oskemen-culture-state-v1";
-const STATE_VERSION = 2;
+const STATE_VERSION = 3;
 
 interface Account {
   email: string;
@@ -57,6 +59,7 @@ interface StoreState {
   savedRoutes: Record<string, string[]>;
   savedEvents: Record<string, string[]>;
   draft: RouteDraft | null;
+  siteSettings: SiteSettings;
 }
 
 interface ActionResult {
@@ -94,6 +97,8 @@ interface AppContextValue {
   savedRouteIds: string[];
   savedEventIds: string[];
   draft: RouteDraft | null;
+  siteSettings: SiteSettings;
+  isAdmin: boolean;
   login: (email: string, password: string) => AuthResult;
   register: (name: string, email: string, password: string) => AuthResult;
   logout: () => void;
@@ -119,6 +124,12 @@ interface AppContextValue {
   saveDraftAsRoute: () => Route | null;
   copyRoute: (routeId: string) => Route | null;
   resetDemo: () => void;
+  approvePost: (postId: string) => void;
+  rejectPost: (postId: string) => void;
+  deletePost: (postId: string) => void;
+  setUserRole: (userId: string, role: "user" | "admin") => void;
+  banUser: (userId: string, banned: boolean) => void;
+  updateSiteSettings: (patch: Partial<SiteSettings>) => void;
 }
 
 const createInitialState = (): StoreState => ({
@@ -148,6 +159,11 @@ const createInitialState = (): StoreState => ({
     "u-alina": ["event-sunset"],
   },
   draft: null,
+  siteSettings: {
+    siteTitle: "Oskemen Culture",
+    maintenanceMode: false,
+    postingEnabled: true,
+  },
 });
 
 const loadState = (): StoreState => {
@@ -170,6 +186,7 @@ const loadState = (): StoreState => {
       savedRoutes: parsed.savedRoutes ?? {},
       savedEvents: parsed.savedEvents ?? {},
       draft: parsed.draft ?? null,
+      siteSettings: parsed.siteSettings ?? createInitialState().siteSettings,
     };
   } catch {
     return createInitialState();
@@ -256,7 +273,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(
     (email: string, password: string): AuthResult => {
-      const normalizedEmail = normalize(email);
+      const cleanEmail = sanitizeText(email);
+      if (!isValidEmail(cleanEmail)) {
+        return { ok: false, error: tr("Проверьте формат почты") };
+      }
+      if (!isValidPassword(password)) {
+        return { ok: false, error: tr("Пароль должен содержать только латиницу, цифры и символы, минимум 8 символов") };
+      }
+      const normalizedEmail = normalize(cleanEmail);
       const account = state.accounts.find(
         (item) => normalize(item.email) === normalizedEmail,
       );
@@ -268,6 +292,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       const user = state.users.find((item) => item.id === account.userId);
       if (!user) return { ok: false, error: tr("Профиль не найден") };
+      if (user.banned) return { ok: false, error: tr("Аккаунт заблокирован") };
       setState((prev) => ({ ...prev, currentUserId: user.id }));
       return { ok: true, user };
     },
@@ -276,15 +301,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const register = useCallback(
     (name: string, email: string, password: string): AuthResult => {
-      const trimmedName = name.trim();
-      const normalizedEmail = normalize(email);
+      const trimmedName = sanitizeText(name);
+      const cleanEmail = sanitizeText(email);
       if (trimmedName.length < 2) return { ok: false, error: tr("Укажите имя") };
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      if (!isValidEmail(cleanEmail)) {
         return { ok: false, error: tr("Проверьте формат почты") };
       }
-      if (password.length < 6) {
-        return { ok: false, error: tr("Пароль должен быть не короче 6 символов") };
+      if (!isValidPassword(password)) {
+        return { ok: false, error: tr("Пароль должен содержать только латиницу, цифры и символы, минимум 8 символов") };
       }
+      const normalizedEmail = normalize(cleanEmail);
       if (state.accounts.some((account) => normalize(account.email) === normalizedEmail)) {
         return { ok: false, error: tr("Эта почта уже зарегистрирована") };
       }
@@ -299,17 +325,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
         id: uid("u"),
         name: trimmedName,
         username,
-        email,
+        email: cleanEmail,
         bio: tr("Новый участник Oskemen Culture."),
         city: tr("Өскемен"),
         joinedAt: new Date().toISOString(),
         avatarColor: palette[state.users.length % palette.length],
         interests: defaultInterests,
+        role: "user",
       };
       setState((prev) => ({
         ...prev,
         users: [...prev.users, newUser],
-        accounts: [...prev.accounts, { email, password, userId: newUser.id }],
+        accounts: [...prev.accounts, { email: cleanEmail, password, userId: newUser.id }],
         currentUserId: newUser.id,
       }));
       return { ok: true, user: newUser };
@@ -464,24 +491,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const createPost = useCallback(
     (input: CreatePostInput) => {
       if (!state.currentUserId) return null;
+      if (!state.siteSettings.postingEnabled) return null;
       const place = placeMap[input.placeId];
       const post: Post = {
         id: uid("post"),
         userId: state.currentUserId,
         placeId: input.placeId,
-        title: input.title.trim(),
-        text: input.text.trim(),
+        title: sanitizeText(input.title),
+        text: sanitizeText(input.text),
         image: input.image || place?.image || "/images/panorama.webp",
         category: input.category,
         createdAt: new Date().toISOString(),
         baseLikes: 0,
         likedBy: [],
         comments: [],
+        approved: false,
       };
       setState((prev) => ({ ...prev, posts: [post, ...prev.posts] }));
       return post;
     },
-    [state.currentUserId, placeMap],
+    [state.currentUserId, placeMap, state.siteSettings.postingEnabled],
   );
 
   const addPlace = useCallback(
@@ -767,6 +796,47 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setState(createInitialState());
   }, []);
 
+  const isAdmin = currentUser?.role === "admin";
+
+  const approvePost = useCallback((postId: string) => {
+    setState((prev) => ({
+      ...prev,
+      posts: prev.posts.map((post) => (post.id === postId ? { ...post, approved: true } : post)),
+    }));
+  }, []);
+
+  const rejectPost = useCallback((postId: string) => {
+    setState((prev) => ({
+      ...prev,
+      posts: prev.posts.map((post) => (post.id === postId ? { ...post, approved: false } : post)),
+    }));
+  }, []);
+
+  const deletePost = useCallback((postId: string) => {
+    setState((prev) => ({ ...prev, posts: prev.posts.filter((post) => post.id !== postId) }));
+  }, []);
+
+  const setUserRole = useCallback((userId: string, role: "user" | "admin") => {
+    setState((prev) => ({
+      ...prev,
+      users: prev.users.map((user) => (user.id === userId ? { ...user, role } : user)),
+    }));
+  }, []);
+
+  const banUser = useCallback((userId: string, banned: boolean) => {
+    setState((prev) => ({
+      ...prev,
+      users: prev.users.map((user) => (user.id === userId ? { ...user, banned } : user)),
+    }));
+  }, []);
+
+  const updateSiteSettings = useCallback((patch: Partial<SiteSettings>) => {
+    setState((prev) => ({
+      ...prev,
+      siteSettings: { ...prev.siteSettings, ...patch },
+    }));
+  }, []);
+
   const contextValue = useMemo<AppContextValue>(
     () => ({
       users,
@@ -782,6 +852,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       savedRouteIds: currentUser ? ensureList(state.savedRoutes, currentUser.id) : [],
       savedEventIds: currentUser ? ensureList(state.savedEvents, currentUser.id) : [],
       draft: state.draft,
+      siteSettings: state.siteSettings,
+      isAdmin,
       login,
       register,
       logout,
@@ -807,6 +879,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       saveDraftAsRoute,
       copyRoute,
       resetDemo,
+      approvePost,
+      rejectPost,
+      deletePost,
+      setUserRole,
+      banUser,
+      updateSiteSettings,
     }),
     [
       addComment,

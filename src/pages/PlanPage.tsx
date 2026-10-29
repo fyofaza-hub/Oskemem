@@ -11,6 +11,7 @@ import { Button, ButtonLink, IconButton } from "@/components/ui/Button";
 import { EmptyState, PageHeader } from "@/components/ui/Bits";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { Modal } from "@/components/ui/Modal";
+import { Input } from "@/components/ui/Field";
 import { TimeField } from "@/components/ui/TimeField";
 import { MapView } from "@/components/map/MapView";
 
@@ -67,6 +68,7 @@ export function PlanPage() {
     currentUser?.interests?.length ? [currentUser.interests[0]] : ["food"],
   );
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [placeSearch, setPlaceSearch] = useState("");
   const [selectionError, setSelectionError] = useState(false);
   const [replaceOpen, setReplaceOpen] = useState(false);
   const [inspirationLoading, setInspirationLoading] = useState(false);
@@ -123,6 +125,16 @@ export function PlanPage() {
       }),
     );
   }, [budget, interests, placeMap]);
+
+  const filteredRecommendations = useMemo(() => {
+    const query = placeSearch.trim().toLowerCase();
+    if (!query) return recommendations;
+    return recommendations.filter((place) =>
+      [place.name, place.district, place.address].some((value) =>
+        value.toLowerCase().includes(query),
+      ),
+    );
+  }, [recommendations, placeSearch]);
 
   const selectedPlaces = selectedIds.map((id) => placeMap[id]).filter(Boolean);
   const draftStops = draft
@@ -516,6 +528,15 @@ export function PlanPage() {
                   </span>
                 </div>
 
+                <div className="mt-4">
+                  <Input
+                    leadingIcon="search"
+                    placeholder={tr("Найти место, район, кофе, музей…")}
+                    value={placeSearch}
+                    onChange={(event) => setPlaceSearch(event.target.value)}
+                  />
+                </div>
+
                 {inspirationLoading ? (
                   <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
                     {Array.from({ length: 4 }).map((_, index) => (
@@ -528,9 +549,10 @@ export function PlanPage() {
                       </div>
                     ))}
                   </div>
-                ) : recommendations.length ? (
-                  <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
-                    {recommendations.map((place) => {
+                ) : filteredRecommendations.length ? (
+                  <div className="mt-3 max-h-[420px] overflow-y-auto pr-1">
+                    <div className="grid gap-2.5 sm:grid-cols-2">
+                      {filteredRecommendations.map((place) => {
                       const selected = selectedIds.includes(place.id);
                       return (
                         <button
@@ -570,6 +592,15 @@ export function PlanPage() {
                         </button>
                       );
                     })}
+                    </div>
+                  </div>
+                ) : recommendations.length ? (
+                  <div className="mt-4">
+                    <EmptyState
+                      icon="search"
+                      title={tr("Ничего не найдено")}
+                      description={tr("Попробуйте другой запрос или сбросьте фильтр.")}
+                    />
                   </div>
                 ) : (
                   <div className="mt-4">

@@ -69,6 +69,8 @@ export interface User {
   avatarColor: string;
   interests: CategoryId[];
   demo?: boolean;
+  role?: "user" | "admin";
+  banned?: boolean;
 }
 
 export interface Comment {
@@ -91,6 +93,7 @@ export interface Post {
   likedBy: string[];
   comments: Comment[];
   demo?: boolean;
+  approved?: boolean;
 }
 
 export interface RouteStop {
@@ -151,6 +154,12 @@ export interface ProfileUpdate {
   avatar?: string;
   avatarColor?: string;
   interests?: CategoryId[];
+}
+
+export interface SiteSettings {
+  siteTitle: string;
+  maintenanceMode: boolean;
+  postingEnabled: boolean;
 }
 
 export interface FilterOption<T extends string> {

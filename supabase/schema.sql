@@ -22,6 +22,8 @@ create table if not exists public.profiles (
   avatar_url text,
   avatar_color text,
   interests text[] not null default '{}',
+  role text not null default 'user' check (role in ('user','admin')),
+  banned boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint profiles_username_format check (username ~ '^[a-zA-Z0-9._-]{3,32}$')
@@ -199,6 +201,20 @@ create index if not exists comments_post_id_idx on public.comments (post_id, cre
 create index if not exists routes_author_id_idx on public.routes (author_id, created_at desc);
 create index if not exists route_stops_route_id_idx on public.route_stops (route_id, position);
 create index if not exists events_starts_at_idx on public.events (starts_at);
+
+-- ---------------------------------------------------------------------------
+-- Параметры сайта
+-- ---------------------------------------------------------------------------
+
+create table if not exists public.site_settings (
+  key text primary key,
+  value jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
+insert into public.site_settings (key, value)
+values ('main', '{"siteTitle":"Oskemen Culture","maintenanceMode":false,"postingEnabled":true}'::jsonb)
+on conflict (key) do nothing;
 
 -- ---------------------------------------------------------------------------
 -- Row Level Security

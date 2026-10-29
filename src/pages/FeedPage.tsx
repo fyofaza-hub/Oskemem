@@ -25,7 +25,8 @@ const sortOptions: Array<{ value: FeedSort; label: string }> = [
 ];
 
 export function FeedPage() {
-  const { posts, users, currentUser, getUser, placeMap } = useApp();
+  const { posts: allPosts, users, currentUser, getUser, placeMap } = useApp();
+  const posts = allPosts.filter((post) => post.approved || post.demo);
   const ready = useDelayedReady(420);
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState("");

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { cn } from "@/lib/utils";
-import { tr } from "@/i18n/runtime";
+import { currentLanguage, tr } from "@/i18n/runtime";
 import { IconButton } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/Bits";
 
@@ -127,11 +127,14 @@ export function MapView({
         touchZoom: interactive,
       });
       mapRef.current = map;
-      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      const mapLanguage = currentLanguage();
+      const tileLanguage = mapLanguage === "kk" ? "kk" : mapLanguage;
+      L.tileLayer(`https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png?lang=${tileLanguage}`, {
         attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>',
-        maxZoom: 19,
+          '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors, <a href="https://foundation.wikimedia.org/wiki/Maps_Terms_of_Use" target="_blank" rel="noreferrer">Wikimedia Maps</a>',
+        maxZoom: 18,
         crossOrigin: true,
+        errorTileUrl: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
       }).addTo(map);
       L.control.zoom({ position: "bottomright" }).addTo(map);
 

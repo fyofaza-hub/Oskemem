@@ -7,7 +7,9 @@ import { cn, priceLabel } from "@/lib/utils";
 import { tr } from "@/i18n/runtime";
 import { categoryMap } from "@/data/categories";
 import { CategoryIcon } from "@/components/ui/Category";
-import { Button, IconButton } from "@/components/ui/Button";
+import { Icon } from "@/components/ui/Icon";
+import { Button } from "@/components/ui/Button";
+import { Heart } from "lucide-react";
 
 interface PlaceCardProps {
   place: Place;
@@ -72,14 +74,14 @@ export function PlaceCard({ place, onOpen, variant = "default", index }: PlaceCa
             {categoryMap[place.category].shortLabel} · {place.district}
           </p>
         </div>
-        <IconButton
-          icon="heart"
-          label={favorite ? tr("Убрать из избранного") : tr("В избранное")}
-          size="sm"
-          active={favorite}
+        <button
+          type="button"
           onClick={handleFavorite}
-          className="relative z-10"
-        />
+          aria-label={favorite ? tr("Убрать из избранного") : tr("В избранное")}
+          className={cn("relative z-10 flex h-9 w-9 items-center justify-center rounded-full transition-colors", favorite ? "text-danger hover:text-danger" : "text-muted hover:text-fg")}
+        >
+          {favorite ? <Heart size={16} fill="currentColor" strokeWidth={0} /> : <Icon name="heart" size={16} />}
+        </button>
       </div>
     );
   }
@@ -107,14 +109,17 @@ export function PlaceCard({ place, onOpen, variant = "default", index }: PlaceCa
             {String((index ?? 0) + 1).padStart(2, "0")}
           </span>
         ) : null}
-        <IconButton
-          icon="heart"
-          label={favorite ? tr("Убрать из избранного") : tr("В избранное")}
-          variant="media"
-          active={favorite}
+        <button
+          type="button"
           onClick={handleFavorite}
-          className="pointer-events-auto absolute right-3 top-3 z-10"
-        />
+          aria-label={favorite ? tr("Убрать из избранного") : tr("В избранное")}
+          className={cn(
+            "pointer-events-auto absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-neutral-800 shadow-card backdrop-blur-sm transition-colors hover:bg-white hover:text-neutral-900",
+            favorite && "text-danger hover:text-danger",
+          )}
+        >
+          {favorite ? <Heart size={16} fill="currentColor" strokeWidth={0} /> : <Icon name="heart" size={16} />}
+        </button>
       </div>
 
       <div className="pointer-events-none relative z-0 flex flex-1 flex-col gap-2 p-4">

@@ -34,7 +34,7 @@ const personalNav: NavItem[] = [
 export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { currentUser, logout } = useApp();
+  const { currentUser, logout, isAdmin } = useApp();
   const { toast } = useToast();
   const search = new URLSearchParams(location.search);
 
@@ -73,6 +73,19 @@ export function Sidebar() {
         {primaryNav.map(renderItem)}
         <div className="my-3 border-t border-line" />
         {personalNav.map(renderItem)}
+        {isAdmin ? (
+          <Link
+            to="/admin"
+            aria-current={location.pathname === "/admin" ? "page" : undefined}
+            className={cn(
+              "flex h-10 items-center gap-2.5 rounded-xl px-3 text-[13px] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+              location.pathname === "/admin" ? "bg-accent-soft text-accent-ink" : "text-muted hover:bg-sunken hover:text-fg",
+            )}
+          >
+            <Icon name="shield" size={18} />
+            <span className="truncate">{tr("Админ-панель")}</span>
+          </Link>
+        ) : null}
       </nav>
 
       <div className="shrink-0 border-t border-line p-3">

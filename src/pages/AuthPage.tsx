@@ -8,6 +8,7 @@ import { useToast } from "@/context/ToastContext";
 import { tr } from "@/i18n/runtime";
 import { Logo } from "@/components/ui/Logo";
 import { Button, ButtonLink, IconButton } from "@/components/ui/Button";
+import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { Field, Input } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
 
@@ -69,8 +70,12 @@ export function AuthPage() {
       setError(tr("Введите почту"));
       return;
     }
-    if (password.length < 6) {
-      setError(tr("Пароль должен быть не короче 6 символов"));
+    if (!/^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$/.test(email.trim())) {
+      setError(tr("Проверьте формат почты"));
+      return;
+    }
+    if (password.length < 8 || !/^[A-Za-z0-9!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]+$/.test(password)) {
+      setError(tr("Пароль должен содержать только латиницу, цифры и символы, минимум 8 символов"));
       return;
     }
 
@@ -114,7 +119,10 @@ export function AuthPage() {
         <section className="relative hidden flex-col overflow-hidden border-r border-line bg-surface lg:flex">
           <div className="relative flex items-center justify-between border-b border-line px-8 py-5 xl:px-10">
             <Logo />
-            <span className="badge">{tr("социальный гид по Өскемену")}</span>
+            <div className="flex items-center gap-3">
+              <span className="badge">{tr("социальный гид по Өскемену")}</span>
+              <LanguageSwitcher />
+            </div>
           </div>
 
           <div className="relative flex flex-1 flex-col justify-center px-8 py-8 xl:px-10">
@@ -185,6 +193,7 @@ export function AuthPage() {
               <Logo />
             </div>
             <div className="ml-auto flex items-center gap-2">
+              <LanguageSwitcher />
               <IconButton
                 icon={isLight ? "moon" : "sun"}
                 label={isLight ? tr("Включить тёмную тему") : tr("Включить светлую тему")}

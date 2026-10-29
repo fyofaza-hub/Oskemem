@@ -5,6 +5,7 @@ import { AppProvider } from "@/context/AppContext";
 import { LanguageProvider } from "@/i18n/LanguageContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { ToastProvider } from "@/context/ToastContext";
+import { AdminPage } from "@/pages/AdminPage";
 import { AuthPage } from "@/pages/AuthPage";
 import { EventsPage } from "@/pages/EventsPage";
 import { FeedPage } from "@/pages/FeedPage";
@@ -37,6 +38,7 @@ export default function App() {
                     <Route path="routes/new" element={<RouteBuilderPage />} />
                     <Route path="routes/:id" element={<RouteDetailPage />} />
                     <Route path="events" element={<EventsPage />} />
+                    <Route path="admin" element={<AdminPage />} />
                     <Route path="profile" element={<ProfilePage />} />
                     <Route path="plan" element={<PlanPage />} />
                     <Route path="*" element={<NotFoundPage />} />

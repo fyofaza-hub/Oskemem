@@ -12,6 +12,7 @@ export const seedUsers: User[] = [
     avatarColor: "linear-gradient(135deg, #4D8DFF 0%, #1C4CA8 100%)",
     interests: ["culture", "leisure", "food"],
     demo: true,
+    role: "admin",
   },
   {
     id: "u-erzhan",

@@ -665,29 +665,29 @@ export function ProfilePage() {
       <PostDetailModal post={selectedPost} onClose={() => setSelectedPost(null)} />
       <EventDetailModal event={selectedEvent} onClose={() => setSelectedEvent(null)} />
 
-      <Modal open={resetOpen} onClose={() => setResetOpen(false)} title={tr("Сбросить данные?")} size="sm">
-        <div className="p-5">
-          <p className="text-sm leading-relaxed text-muted">
-            {tr("Вернутся исходные публикации, маршруты, избранное и профиль Алины. Ваши созданные записи и загруженные фото будут удалены.")}
-          </p>
-          <div className="mt-5 flex gap-2">
-            <Button variant="secondary" fullWidth onClick={() => setResetOpen(false)}>
-              {tr("Отмена")}
-            </Button>
-            <Button
-              variant="danger"
-              fullWidth
-              onClick={() => {
-                resetDemo();
-                setResetOpen(false);
-                setTab("posts");
-                toast({ title: tr("Данные сброшены"), description: tr("Снова открыт профиль Алины.") });
-              }}
-            >
-              {tr("Сбросить")}
-            </Button>
-          </div>
+      <Modal open={resetOpen} onClose={() => setResetOpen(false)} title={tr("Сбросить данные?")} size="sm" footer={
+        <div className="flex gap-2">
+          <Button variant="secondary" className="flex-1" onClick={() => setResetOpen(false)}>
+            {tr("Отмена")}
+          </Button>
+          <Button
+            variant="danger"
+            className="flex-1"
+            onClick={() => {
+              resetDemo();
+              setResetOpen(false);
+              setTab("posts");
+              toast({ title: tr("Данные сброшены"), description: tr("Снова открыт профиль Алины.") });
+              window.setTimeout(() => window.location.reload(), 300);
+            }}
+          >
+            {tr("Сбросить")}
+          </Button>
         </div>
+      }>
+        <p className="text-sm leading-relaxed text-muted">
+          {tr("Вы собираетесь удалить данные. Это действие нельзя отменить.")}
+        </p>
       </Modal>
 
       <Modal open={logoutOpen} onClose={() => setLogoutOpen(false)} title={tr("Выйти из профиля?")} size="sm">
@@ -696,12 +696,12 @@ export function ProfilePage() {
             {tr("Избранное и черновики останутся в браузере и вернутся после следующего входа.")}
           </p>
           <div className="mt-5 flex gap-2">
-            <Button variant="secondary" fullWidth onClick={() => setLogoutOpen(false)}>
+            <Button variant="secondary" className="flex-1" onClick={() => setLogoutOpen(false)}>
               {tr("Остаться")}
             </Button>
             <Button
               variant="danger"
-              fullWidth
+              className="flex-1"
               icon="logout"
               onClick={() => {
                 logout();
