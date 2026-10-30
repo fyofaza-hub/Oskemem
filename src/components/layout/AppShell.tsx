@@ -3,6 +3,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { tr } from "@/i18n/runtime";
 import { prefetchOnIdle } from "@/lib/prefetch";
+import { AIChat } from "@/components/AIChat";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { MobileNav } from "@/components/layout/MobileNav";
@@ -18,6 +19,38 @@ export function AppShell() {
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+  }, [location.pathname]);
+
+  // Плавное проявление контента (data-reveal): IntersectionObserver + MutationObserver,
+  // чтобы охватить и элементы, появившиеся после скелетонов загрузки.
+  useEffect(() => {
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const main = document.getElementById("main");
+    if (!main) return;
+    document.documentElement.classList.add("reveal-ready");
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("reveal-in");
+            observer.unobserve(entry.target);
+          }
+        }
+      },
+      { rootMargin: "0px 0px -8% 0px", threshold: 0.06 },
+    );
+    const observeAll = () => {
+      main.querySelectorAll("[data-reveal]").forEach((el) => {
+        if (!el.classList.contains("reveal-in")) observer.observe(el);
+      });
+    };
+    observeAll();
+    const mutation = new MutationObserver(observeAll);
+    mutation.observe(main, { childList: true, subtree: true });
+    return () => {
+      observer.disconnect();
+      mutation.disconnect();
+    };
   }, [location.pathname]);
 
   // Прогрев малых чанков вероятных переходов — навигация ощущается мгновенной.
@@ -62,6 +95,8 @@ export function AppShell() {
       <MobileNav />
       <DraftBar />
       <SearchOverlay open={searchOpen} onClose={closeSearch} />
+      {/* AI-гид: плавающий чат-виджет доступен со всех страниц приложения (кроме входа) */}
+      <AIChat />
     </div>
   );
 }

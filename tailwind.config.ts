@@ -37,6 +37,10 @@ export default {
       boxShadow: {
         card: "0 1px 2px rgb(15 23 42 / 0.05), 0 1px 3px rgb(15 23 42 / 0.05)",
         raised: "0 24px 50px -20px rgb(15 23 42 / 0.3), 0 4px 12px -4px rgb(15 23 42 / 0.13)",
+        /* Фирменное «дорогое» свечение акцента (тёмная тема): мягкий ореол, а не неон */
+        "glow-sm": "0 0 14px rgba(249, 115, 22, 0.16)",
+        glow: "0 0 26px rgba(249, 115, 22, 0.24)",
+        "glow-fab": "0 10px 30px rgba(249, 115, 22, 0.32), 0 0 24px rgba(249, 115, 22, 0.22)",
       },
       transitionTimingFunction: {
         smooth: "cubic-bezier(0.22, 1, 0.36, 1)",

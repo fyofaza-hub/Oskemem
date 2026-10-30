@@ -9,6 +9,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { ButtonLink } from "@/components/ui/Button";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { Modal } from "@/components/ui/Modal";
+import { THEME_OPTIONS, ThemeSwatches } from "@/components/layout/ThemeSwitcher";
 
 interface MobileMenuProps {
   open: boolean;
@@ -93,25 +94,27 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
           </div>
 
           <p className="field-label pt-2">{tr("Тема оформления")}</p>
-          <div className="segmented w-full">
-            <button
-              type="button"
-              aria-pressed={theme === "light"}
-              onClick={() => setTheme("light")}
-              className={cn("segmented-item flex-1 gap-1.5", theme === "light" && "segmented-item-active")}
-            >
-              <Icon name="sun" size={15} />
-              {tr("Светлая")}
-            </button>
-            <button
-              type="button"
-              aria-pressed={theme === "dark"}
-              onClick={() => setTheme("dark")}
-              className={cn("segmented-item flex-1 gap-1.5", theme === "dark" && "segmented-item-active")}
-            >
-              <Icon name="moon" size={15} />
-              {tr("Тёмная")}
-            </button>
+          <div className="flex w-full flex-col gap-1 rounded-2xl border border-line bg-sunken/40 p-1.5">
+            {THEME_OPTIONS.map((option) => {
+              const active = theme === option.id;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setTheme(option.id)}
+                  className={cn(
+                    "flex h-10 items-center gap-3 rounded-xl px-3 text-left text-sm font-medium transition-colors duration-200",
+                    active ? "bg-surface text-fg" : "text-muted hover:bg-surface hover:text-fg",
+                  )}
+                >
+                  <Icon name={option.icon} size={15} className="shrink-0" />
+                  <span className="min-w-0 flex-1 truncate">{option.label}</span>
+                  <ThemeSwatches theme={option.id} />
+                  {active ? <Icon name="check" size={14} className="text-accent-ink" /> : null}
+                </button>
+              );
+            })}
           </div>
         </div>
 

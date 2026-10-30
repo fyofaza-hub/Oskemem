@@ -263,7 +263,7 @@ export function MapView({
     layer.clearLayers();
     const points = routeRef.current;
     if (points && points.length > 1) {
-      const dark = document.documentElement.dataset.theme === "dark";
+      const dark = document.documentElement.dataset.theme !== "light";
       // Тёмная тема: линия читается светлым графитом; светлая — чернильно-синий.
       L.polyline(points, {
         color: dark ? "#050810" : "#0F172A",

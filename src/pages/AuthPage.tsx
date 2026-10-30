@@ -14,6 +14,7 @@ import { Field, Input } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
 import { requestTour } from "@/components/onboarding/Onboarding";
 import { track } from "@/lib/analytics";
+import { ThemeSwitcher } from "@/components/layout/ThemeSwitcher";
 
 type AuthMode = "login" | "register";
 
@@ -25,7 +26,7 @@ const demoRoute = [
 
 export function AuthPage() {
   const { currentUser, login, register, savedRouteIds, draft, places, routes, events } = useApp();
-  const { isLight, toggleTheme } = useTheme();
+  const { isLight } = useTheme();
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -182,12 +183,7 @@ export function AuthPage() {
             </div>
             <div className="ml-auto flex items-center gap-2">
               <LanguageSwitcher />
-              <IconButton
-                icon={isLight ? "moon" : "sun"}
-                label={isLight ? tr("Включить тёмную тему") : tr("Включить светлую тему")}
-                variant="bordered"
-                onClick={toggleTheme}
-              />
+              <ThemeSwitcher className="[&>button]:h-10 [&>button]:w-10 [&>button]:border [&>button]:border-line [&>button]:bg-surface" />
               <ButtonLink to="/" variant="ghost" size="sm" icon="arrowLeft" aria-label={tr("На главную")} className="px-2.5 sm:px-3">
                 <span className="sr-only sm:not-sr-only">{tr("На главную")}</span>
               </ButtonLink>

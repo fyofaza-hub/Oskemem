@@ -58,24 +58,35 @@
     <script>
       (function () {
         try {
+          // Палитры в духе Bear: одна светлая + четыре «дорогие» тёмные.
+          // Старое значение "dark" мигрирует в Charcoal (та же роль, что была у тёмной).
+          var THEMES = {
+            light: "#F8FAFC",
+            charcoal: "#1C1C1E",
+            "solarized-dark": "#002B36",
+            "panic-mode": "#12141C",
+            gotham: "#0F131A",
+          };
           var stored = localStorage.getItem("oskemen-theme");
-          var theme =
-            stored === "light" || stored === "dark"
-              ? stored
-              : window.matchMedia("(prefers-color-scheme: light)").matches
-                ? "light"
-                : "dark";
+          if (stored === "dark") stored = "charcoal";
+          var theme = stored && THEMES[stored] ? stored : window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "charcoal";
           document.documentElement.dataset.theme = theme;
-          document.documentElement.style.colorScheme = theme;
+          document.documentElement.style.colorScheme = theme === "light" ? "light" : "dark";
           var meta = document.querySelector('meta[name="theme-color"]');
-          if (meta) meta.setAttribute("content", theme === "light" ? "#F8FAFC" : "#08090C");
+          if (meta) meta.setAttribute("content", THEMES[theme]);
         } catch (error) {
-          document.documentElement.dataset.theme = "dark";
+          document.documentElement.dataset.theme = "charcoal";
         }
       })();
     </script>
   </head>
   <body>
+    <!-- Aurora-туман (Gemini-стиль): живёт вне React-дерева, чтобы не пересоздавался на переходах -->
+    <div class="aurora" aria-hidden="true">
+      <div class="aurora-blob aurora-blob-1"></div>
+      <div class="aurora-blob aurora-blob-2"></div>
+      <div class="aurora-blob aurora-blob-3"></div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

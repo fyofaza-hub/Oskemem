@@ -57,20 +57,28 @@ export function Sidebar() {
         to={item.to}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "flex h-11 items-center gap-3 rounded-xl px-3.5 text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+          "relative flex h-11 items-center gap-3 rounded-xl pr-3.5 pl-4 text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
           active
-            ? "bg-accent-soft text-accent-ink ring-1 ring-inset ring-accent/20"
+            ? "bg-accent-soft text-accent-ink shadow-glow-sm ring-1 ring-inset ring-accent/25"
             : "text-muted hover:bg-sunken hover:text-fg",
         )}
       >
-        <Icon name={item.icon} size={19} />
+        {/* Акцентный маркер активного пункта: вертикальная полоска с лёгким свечением */}
+        <span
+          aria-hidden="true"
+          className={cn(
+            "absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-full bg-gradient-to-b from-accent to-accent-hover transition-all duration-300 ease-smooth",
+            active ? "scale-100 opacity-100 shadow-glow-sm" : "scale-y-50 opacity-0",
+          )}
+        />
+        <Icon name={item.icon} size={19} className="shrink-0" />
         <span className="truncate">{item.label}</span>
       </Link>
     );
   };
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-line bg-canvas lg:flex">
+    <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-line bg-canvas/75 backdrop-blur-2xl backdrop-saturate-150 lg:flex">
       <div className="flex h-16 shrink-0 items-center px-5">
         <Logo />
       </div>

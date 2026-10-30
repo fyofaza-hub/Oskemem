@@ -1,6 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
 import { useApp } from "@/context/AppContext";
-import { useTheme } from "@/context/ThemeContext";
 import { cn } from "@/lib/utils";
 import { tr } from "@/i18n/runtime";
 import { Logo } from "@/components/ui/Logo";
@@ -8,6 +7,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { ButtonLink, IconButton } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
+import { ThemeSwitcher } from "@/components/layout/ThemeSwitcher";
 import { UserMenu } from "@/components/layout/UserMenu";
 import { VoiceSearchButton } from "@/components/search/VoiceSearch";
 
@@ -32,7 +32,6 @@ interface TopbarProps {
 export function Topbar({ onSearch }: TopbarProps) {
   const location = useLocation();
   const { currentUser } = useApp();
-  const { isLight, toggleTheme } = useTheme();
   const section = sections.find((item) => item.match(location.pathname));
   const title = section?.label ?? tr("Oskemen Culture");
 
@@ -62,12 +61,9 @@ export function Topbar({ onSearch }: TopbarProps) {
             <LanguageSwitcher />
           </div>
 
-          <IconButton
-            icon={isLight ? "moon" : "sun"}
-            label={isLight ? tr("Включить тёмную тему") : tr("Включить светлую тему")}
-            onClick={toggleTheme}
-            className="hidden lg:inline-flex"
-          />
+          <div className="hidden lg:block">
+            <ThemeSwitcher />
+          </div>
 
           {currentUser ? (
             <div className="hidden lg:block">

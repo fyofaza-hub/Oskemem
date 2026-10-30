@@ -28,27 +28,96 @@
   --font-display: "Onest Variable", "Onest", "Inter Variable", system-ui, sans-serif;
 }
 
-:root[data-theme="dark"] {
+/* Тема «Charcoal» — нейтральный iOS-стиль графита */
+:root[data-theme="charcoal"] {
   color-scheme: dark;
-  /* Глубокий чистый чёрный: максимальный контраст, OLED-экономия */
-  --canvas: 8 9 12;
-  --surface: 17 19 24;
-  --sunken: 27 30 37;
-  --line: 40 45 56;
-  --line-strong: 68 75 89;
-  --fg: 232 235 240;
-  --fg-muted: 150 156 168;
-  --fg-faint: 104 111 123;
-  --accent: 255 140 97;
-  --accent-hover: 255 158 124;
-  --accent-soft: 46 33 27;
+  --canvas: 28 28 30;
+  --surface: 44 44 46;
+  --sunken: 58 58 62;
+  --line: 64 64 70;
+  --line-strong: 96 96 104;
+  --fg: 236 238 241;
+  --fg-muted: 170 172 178;
+  --fg-faint: 131 133 140;
+  --accent: 255 132 87;
+  --accent-hover: 255 160 122;
+  --accent-soft: 48 30 24;
   --accent-ink: 255 172 138;
-  --danger: 246 85 85;
-  --danger-hover: 252 105 100;
+  --danger: 232 76 80;
+  --danger-hover: 248 96 100;
   --danger-soft: 66 26 28;
-  --danger-ink: 252 165 165;
-  --scrim: 0 0 0;
-  --route-end: 255 140 97;
+  --danger-ink: 252 160 160;
+  --scrim: 10 10 12;
+  --route-end: 255 132 87;
+}
+
+/* Тема «Solarized Dark» — глубокий бирюзово-синий сланец с приглушённым тёплым акцентом */
+:root[data-theme="solarized-dark"] {
+  color-scheme: dark;
+  --canvas: 0 43 54;
+  --surface: 7 54 66;
+  --sunken: 11 66 78;
+  --line: 27 79 92;
+  --line-strong: 46 100 114;
+  --fg: 214 222 224;
+  --fg-muted: 131 148 150;
+  --fg-faint: 88 110 117;
+  --accent: 240 110 50;
+  --accent-hover: 250 134 76;
+  --accent-soft: 55 28 18;
+  --accent-ink: 250 168 120;
+  --danger: 220 50 47;
+  --danger-hover: 236 78 76;
+  --danger-soft: 72 26 25;
+  --danger-ink: 252 142 140;
+  --scrim: 0 20 25;
+  --route-end: 240 110 50;
+}
+
+/* Тема «Panic Mode» — ультра-тёмный сланец, высокий контраст, холодный лёд-акцент */
+:root[data-theme="panic-mode"] {
+  color-scheme: dark;
+  --canvas: 18 20 28;
+  --surface: 26 29 40;
+  --sunken: 34 38 54;
+  --line: 44 50 68;
+  --line-strong: 70 78 100;
+  --fg: 244 246 250;
+  --fg-muted: 168 176 198;
+  --fg-faint: 122 131 156;
+  --accent: 92 190 255;
+  --accent-hover: 132 212 255;
+  --accent-soft: 16 44 68;
+  --accent-ink: 152 214 255;
+  --danger: 244 84 84;
+  --danger-hover: 252 104 100;
+  --danger-soft: 66 26 28;
+  --danger-ink: 252 160 160;
+  --scrim: 6 8 12;
+  --route-end: 92 190 255;
+}
+
+/* Тема «Gotham» — полуночный синий ночной город с атмосферным стальным акцентом */
+:root[data-theme="gotham"] {
+  color-scheme: dark;
+  --canvas: 15 19 26;
+  --surface: 22 27 34;
+  --sunken: 30 36 48;
+  --line: 43 51 66;
+  --line-strong: 66 77 96;
+  --fg: 228 233 241;
+  --fg-muted: 157 167 183;
+  --fg-faint: 111 121 140;
+  --accent: 104 158 255;
+  --accent-hover: 142 186 255;
+  --accent-soft: 21 36 58;
+  --accent-ink: 158 198 255;
+  --danger: 235 90 92;
+  --danger-hover: 245 112 110;
+  --danger-soft: 66 26 30;
+  --danger-ink: 255 162 162;
+  --scrim: 4 6 10;
+  --route-end: 104 158 255;
 }
 
 * {
@@ -82,6 +151,8 @@ body {
 }
 
 #root {
+  position: relative;
+  z-index: 1;
   min-height: 100vh;
 }
 
@@ -136,9 +207,41 @@ img {
 
 /* iOS/Safari на мобильных плохо держит fixed-фон — там пусть просто скроллится */
 @media (max-width: 1024px) {
-  body {
+  body,
+  :root[data-theme="charcoal"] body,
+  :root[data-theme="solarized-dark"] body,
+  :root[data-theme="panic-mode"] body,
+  :root[data-theme="gotham"] body {
     background-attachment: scroll;
   }
+}
+
+/* Тёмные темы: верхний градиент «в глубину» — внизу к трону elemetary затемнению */
+:root[data-theme="charcoal"] {
+  --canvas-depth: 14 14 16;
+}
+:root[data-theme="solarized-dark"] {
+  --canvas-depth: 0 30 38;
+}
+:root[data-theme="panic-mode"] {
+  --canvas-depth: 10 11 16;
+}
+:root[data-theme="gotham"] {
+  --canvas-depth: 8 11 15;
+}
+
+/* Тёмный фон: фирменный ореол акцента сверху, холодные синие подсветки по краям
+   и вертикальный уход в «глубину» внизу */
+:root[data-theme="charcoal"] body,
+:root[data-theme="solarized-dark"] body,
+:root[data-theme="panic-mode"] body,
+:root[data-theme="gotham"] body {
+  background:
+    radial-gradient(1100px 480px at 50% -12%, rgb(var(--accent) / 0.09), transparent 70%),
+    radial-gradient(900px 520px at 88% -6%, rgb(59 91 173 / 0.1), transparent 66%),
+    radial-gradient(760px 420px at 4% 12%, rgb(59 91 173 / 0.06), transparent 70%),
+    linear-gradient(180deg, rgb(var(--canvas)) 0%, rgb(var(--canvas-depth)) 100%);
+  background-attachment: fixed;
 }
 
 :focus-visible {
@@ -218,11 +321,30 @@ img {
   }
 
   .btn-primary:hover {
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.18), 0 2px 6px rgb(15 23 42 / 0.24);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.18),
+      0 4px 14px rgb(15 23 42 / 0.3),
+      0 0 24px rgb(var(--accent) / 0.35);
+  }
+
+  .btn-primary:focus-visible {
+    box-shadow: 0 0 24px rgb(var(--accent) / 0.4);
   }
 
   .btn-secondary {
     @apply border border-line bg-surface text-fg hover:border-line-strong hover:bg-sunken;
+    /* Микроподъём и мягкий ореол на hover; переходы наследует базовый .btn */
+  }
+
+  .btn-secondary:hover {
+    transform: translateY(-1px);
+    box-shadow:
+      0 6px 16px -6px rgb(15 23 42 / 0.28),
+      0 0 20px rgb(var(--accent) / 0.12);
+  }
+
+  .btn-secondary:active {
+    transform: none;
   }
 
   .btn-ghost {
@@ -258,6 +380,10 @@ img {
     @apply border border-line bg-surface hover:border-line-strong;
   }
 
+  .icon-btn-bordered:hover {
+    box-shadow: 0 0 20px rgb(var(--accent) / 0.12);
+  }
+
   .icon-btn-on-media {
     @apply bg-white/90 text-neutral-800 shadow-card backdrop-blur-sm hover:bg-white hover:text-neutral-900;
   }
@@ -285,6 +411,7 @@ img {
 
   .chip-active {
     @apply border-accent bg-accent-soft text-accent-ink hover:border-accent hover:text-accent-ink;
+    box-shadow: 0 0 18px rgb(var(--accent) / 0.16);
   }
 
   .card {
@@ -317,6 +444,9 @@ img {
 
   .segmented-item-active {
     @apply bg-surface text-fg shadow-card;
+    box-shadow:
+      0 0 14px rgb(var(--accent) / 0.12),
+      0 1px 2px rgb(15 23 42 / 0.06);
   }
 
   .skeleton {
@@ -384,7 +514,10 @@ img {
   filter: none;
 }
 
-:root[data-theme="dark"] .leaflet-tile-pane {
+:root[data-theme="charcoal"] .leaflet-tile-pane,
+:root[data-theme="solarized-dark"] .leaflet-tile-pane,
+:root[data-theme="panic-mode"] .leaflet-tile-pane,
+:root[data-theme="gotham"] .leaflet-tile-pane {
   filter: invert(1) hue-rotate(180deg) brightness(0.8) contrast(0.92) saturate(0.6);
 }
 
@@ -514,4 +647,137 @@ img {
   border-radius: 50%;
   background: rgb(var(--accent));
   box-shadow: 0 0 0 4px rgb(var(--accent) / 0.25);
+}
+
+/* ---------- Aurora-туман в духе Gemini: дрейфующие голубые пятна + фирменный акцент ---------- */
+/* Живёт в index.html как <div class="aurora">, чтобы не зависеть от React-дерева.
+   Анимации только на transform (GPU), при prefers-reduced-motion — статичные пятна. */
+.aurora {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  --aurora-opacity: 0.9;
+}
+:root[data-theme="light"] .aurora,
+.aurora-light {
+  --aurora-opacity: 0.4;
+}
+
+.aurora-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(64px);
+  will-change: transform;
+  opacity: var(--aurora-opacity, 0.9);
+}
+
+.aurora-blob-1 {
+  width: 62vmax;
+  height: 62vmax;
+  left: -22vw;
+  top: -34vh;
+  background: radial-gradient(closest-side, rgb(88 108 245 / 0.28), rgb(59 91 173 / 0.12) 55%, transparent 74%);
+  animation: aurora-drift-a 44s ease-in-out infinite alternate;
+}
+
+.aurora-blob-2 {
+  width: 54vmax;
+  height: 54vmax;
+  right: -18vw;
+  top: -16vh;
+  background: radial-gradient(closest-side, rgb(72 200 255 / 0.2), rgb(34 158 214 / 0.08) 58%, transparent 76%);
+  animation: aurora-drift-b 36s ease-in-out infinite alternate;
+}
+
+.aurora-blob-3 {
+  width: 44vmax;
+  height: 44vmax;
+  left: 24vw;
+  bottom: -28vh;
+  background: radial-gradient(closest-side, rgb(var(--accent) / 0.14), rgb(var(--accent) / 0.05) 52%, transparent 72%);
+  animation: aurora-drift-c 58s ease-in-out infinite alternate;
+}
+
+@media (max-width: 1024px) {
+  .aurora-blob {
+    filter: blur(46px);
+  }
+}
+
+@keyframes aurora-drift-a {
+  from { transform: translate3d(-3%, -5%, 0) scale(1); }
+  50% { transform: translate3d(5%, 3%, 0) scale(1.14); }
+  to { transform: translate3d(2%, 9%, 0) scale(1.04); }
+}
+
+@keyframes aurora-drift-b {
+  from { transform: translate3d(4%, -2%, 0) scale(1.08); }
+  to { transform: translate3d(-5%, 6%, 0) scale(0.96); }
+}
+
+@keyframes aurora-drift-c {
+  from { transform: translate3d(2%, 3%, 0) scale(1); }
+  to { transform: translate3d(-3%, -5%, 0) scale(1.12); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aurora-blob {
+    animation: none;
+  }
+}
+
+/* ---------- Плавные reveal-анимации контента (data-reveal + IntersectionObserver в AppShell) ---------- */
+/* Прячем только когда JS гарантированно включит наблюдение (класс .reveal-ready на <html>). */
+html.reveal-ready [data-reveal] {
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html.reveal-ready [data-reveal].reveal-in {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.reveal-ready [data-reveal] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* ---------- Микроинтеракции: чипы и иконки-кнопки слегка «дышат» ---------- */
+.chip,
+.icon-btn {
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.25s ease-smooth;
+}
+
+.chip:hover {
+  transform: translateY(-1px);
+}
+
+.icon-btn:hover {
+  transform: scale(1.04);
+}
+
+.icon-btn:active,
+.chip:active {
+  transform: scale(0.96);
+}
+
+.card img {
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.card-interactive:hover img {
+  transform: scale(1.035);
 }

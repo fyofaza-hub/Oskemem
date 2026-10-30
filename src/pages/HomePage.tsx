@@ -51,24 +51,31 @@ export function HomePage() {
   );
   const homePosts = posts.slice(0, 2);
   const homeEvents = events.slice(0, 4);
-  const embankment = places.find((place) => place.id === "place-embankment");
   const firstName = currentUser ? getFirstName(currentUser.name) : null;
 
   return (
     <div className="page-wrap">
-      <section className="grid items-center gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12 lg:px-2 xl:gap-16 xl:px-6">
-        <div>
-          <p className="text-meta font-medium uppercase tracking-[0.14em] text-muted">
+      {/* Баннер-панель: градиент в токенах темы, фирменные пятна-свечения, контент поверх */}
+      <section
+        data-reveal
+        className="relative isolate overflow-hidden rounded-3xl border border-line/60 bg-gradient-to-br from-sunken via-surface to-canvas shadow-raised"
+      >
+        {/* Декоративные пятна-свечения вместо фотографии */}
+        <div aria-hidden="true" className="absolute -top-28 right-[8%] h-80 w-80 rounded-full bg-accent/15 blur-3xl" />
+        <div aria-hidden="true" className="absolute -bottom-32 left-[30%] h-96 w-96 rounded-full bg-[rgb(59_91_173/0.16)] blur-3xl" />
+
+        <div className="relative z-10 flex min-h-[400px] flex-col justify-center px-6 py-14 sm:min-h-[440px] sm:px-10 sm:py-16 lg:min-h-[480px] lg:px-14 lg:py-20">
+          <p className="text-meta font-medium uppercase tracking-[0.16em] text-muted">
             {greeting()}
-            {firstName ? `, ${firstName}` : ""}
+            {firstName ? ", " + firstName : ""}
           </p>
-          <h1 className="mt-3 font-display text-[40px] font-semibold leading-[1.06] tracking-[-0.03em] text-fg sm:text-[52px] lg:text-[60px]">
+          <h1 className="mt-3 max-w-xl font-display text-[44px] font-semibold leading-[1.04] tracking-[-0.03em] text-fg sm:text-[56px] lg:text-[68px]">
             {tr("Открой свой город")}
           </h1>
           <p className="mt-4 max-w-md text-[17px] leading-relaxed text-muted">
             {tr("Места, события и маршруты Өскемена — от людей, которые здесь живут.")}
           </p>
-          <div className="mt-8 flex flex-wrap gap-3" data-tour="plan-cta">
+          <div className="mt-8 flex flex-wrap items-center gap-3" data-tour="plan-cta">
             <ButtonLink to="/plan" variant="primary" size="lg" icon="plan" className="px-6">
               {tr("Куда сходить?")}
             </ButtonLink>
@@ -77,21 +84,6 @@ export function HomePage() {
             </ButtonLink>
           </div>
         </div>
-
-        {embankment ? (
-          <div className="relative aspect-[4/3] overflow-hidden rounded-3xl bg-sunken sm:aspect-[16/10] lg:aspect-[5/4]">
-            <img src={embankment.image} alt="" className="h-full w-full object-cover" />
-            <div className="absolute inset-x-3 bottom-3 flex items-center gap-3 rounded-2xl border border-line/70 bg-surface/90 p-3 pl-4 shadow-raised backdrop-blur-lg sm:inset-x-4 sm:bottom-4">
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-fg">{embankment.name}</p>
-                <p className="truncate text-meta text-muted">{embankment.shortDescription}</p>
-              </div>
-              <Button variant="secondary" size="sm" onClick={() => setSelectedPlace(embankment)}>
-                {tr("Открыть")}
-              </Button>
-            </div>
-          </div>
-        ) : null}
       </section>
 
       <nav aria-label={tr("Категории")} className="no-scrollbar -mx-4 mt-10 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:mt-12 sm:flex-wrap sm:px-0">
@@ -103,7 +95,7 @@ export function HomePage() {
         ))}
       </nav>
 
-      <section className="mt-14 sm:mt-16">
+      <section data-reveal className="mt-14 sm:mt-16">
         <SectionHeading
           title={tr("С чего начать")}
           description={tr("Места, которые стоит увидеть в первую очередь.")}
@@ -116,7 +108,7 @@ export function HomePage() {
         </div>
       </section>
 
-      <section className="mt-14 flex flex-col gap-6 rounded-3xl border border-line bg-surface p-6 shadow-card sm:mt-16 sm:p-8 lg:flex-row lg:items-center lg:justify-between lg:gap-10">
+      <section data-reveal className="mt-14 flex flex-col gap-6 rounded-3xl border border-line bg-surface p-6 shadow-card sm:mt-16 sm:p-8 lg:flex-row lg:items-center lg:justify-between lg:gap-10">
         <div className="max-w-xl">
           <h2 className="section-title">{tr("Не знаете, куда пойти?")}</h2>
           <p className="mt-2 text-sm leading-relaxed text-muted">
@@ -136,7 +128,7 @@ export function HomePage() {
         </ButtonLink>
       </section>
 
-      <section className="mt-14 sm:mt-16">
+      <section data-reveal className="mt-14 sm:mt-16">
         <SectionHeading
           title={tr("Готовые маршруты")}
           description={tr("Время и расстояние ориентировочные.")}
@@ -149,7 +141,7 @@ export function HomePage() {
         </div>
       </section>
 
-      <section className="mt-14 sm:mt-16">
+      <section data-reveal className="mt-14 sm:mt-16">
         <SectionHeading
           title={tr("Ближайшие события")}
           description={tr("Даты считаются от сегодняшнего дня. Программу уточняйте у организатора.")}
@@ -162,7 +154,7 @@ export function HomePage() {
         </div>
       </section>
 
-      <section className="mt-14 grid gap-8 sm:mt-16 lg:grid-cols-[1.2fr_0.8fr] lg:gap-10">
+      <section data-reveal className="mt-14 grid gap-8 sm:mt-16 lg:grid-cols-[1.2fr_0.8fr] lg:gap-10">
         <div className="min-w-0">
           <SectionHeading
             title={tr("Из ленты")}

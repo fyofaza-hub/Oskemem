@@ -244,9 +244,10 @@ export async function savePlaceToDatabase(place: Place, userId?: string): Promis
     illustrative_photo: Boolean(place.illustrativePhoto),
   };
   try {
-    const { error } = await client
-      .from("places")
-      .upsert(userId ? { ...row, created_by: userId } : row);
+    // В схеме 003_community_places.sql колонка created_by есть, но в типах
+    // клиента без Database-дженерика её нет — поэтому честный каст.
+    const rowWithAuthor = userId ? ({ ...row, created_by: userId } as typeof row) : row;
+    const { error } = await client.from("places").upsert(rowWithAuthor);
     if (error && userId) {
       // Старая схема без 003_community_places.sql: повтор без created_by.
       await client.from("places").upsert(row);
