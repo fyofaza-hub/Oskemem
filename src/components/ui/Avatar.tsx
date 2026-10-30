@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { User } from "@/types";
 import { cn, initials } from "@/lib/utils";
 
@@ -17,18 +18,22 @@ const sizes = {
 };
 
 export function Avatar({ user, size = "md", className }: AvatarProps) {
+  const [broken, setBroken] = useState(false);
   return (
     <span
       className={cn(
         "relative inline-flex shrink-0 select-none items-center justify-center overflow-hidden rounded-full font-display font-semibold text-white",
+        // Гарантированный непрозрачный фон + оттенённая круглая кайма:
+        // аватар никогда не «просвечивает» и не выглядит плоским.
+        "bg-sunken shadow-inner ring-1 ring-line",
         sizes[size],
         className,
       )}
       style={{ background: user?.avatarColor ?? "rgb(var(--sunken))" }}
       aria-hidden="true"
     >
-      {user?.avatar ? (
-        <img src={user.avatar} alt="" className="h-full w-full object-cover" />
+      {user?.avatar && !broken ? (
+        <img src={user.avatar} alt="" className="h-full w-full object-cover" onError={() => setBroken(true)} />
       ) : user ? (
         initials(user.name)
       ) : (

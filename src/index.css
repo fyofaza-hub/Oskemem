@@ -422,8 +422,59 @@ img {
     @apply transition-[border-color,box-shadow,transform] duration-300 ease-smooth hover:-translate-y-0.5 hover:border-line-strong hover:shadow-raised;
   }
 
+  :root[data-theme="charcoal"] .card,
+  :root[data-theme="solarized-dark"] .card,
+  :root[data-theme="panic-mode"] .card,
+  :root[data-theme="gotham"] .card {
+    /* Astana-стиль: полупрозрачная панель с блюром и «висящей» глубокой тенью */
+    background: rgb(var(--surface) / 0.82);
+    backdrop-filter: blur(16px) saturate(1.2);
+    -webkit-backdrop-filter: blur(16px) saturate(1.2);
+    box-shadow:
+      0 1px 0 rgb(255 255 255 / 0.04) inset,
+      0 20px 50px -24px rgb(0 0 0 / 0.55),
+      0 2px 8px rgb(0 0 0 / 0.25);
+  }
+
+  :root[data-theme="charcoal"] .card-interactive,
+  :root[data-theme="solarized-dark"] .card-interactive,
+  :root[data-theme="panic-mode"] .card-interactive,
+  :root[data-theme="gotham"] .card-interactive {
+    box-shadow: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 8px 24px -16px rgb(0 0 0 / 0.5);
+  }
+
+  :root[data-theme="charcoal"] .card-interactive:hover,
+  :root[data-theme="solarized-dark"] .card-interactive:hover,
+  :root[data-theme="panic-mode"] .card-interactive:hover,
+  :root[data-theme="gotham"] .card-interactive:hover {
+    box-shadow:
+      0 1px 0 rgb(255 255 255 / 0.06) inset,
+      0 24px 60px -20px rgb(0 0 0 / 0.6),
+      0 0 24px rgb(var(--accent) / 0.1);
+  }
+
+  .btn-ghost:hover {
+    box-shadow: 0 0 16px rgb(var(--accent) / 0.08);
+  }
+
+  .field:hover {
+    border-color: rgb(var(--line-strong));
+  }
+
+  .field:focus {
+    box-shadow: 0 0 0 4px rgb(var(--accent) / 0.18);
+  }
+
   :root[data-theme="light"] .card {
     box-shadow: 0 1px 2px rgb(15 23 42 / 0.06), 0 1px 3px rgb(15 23 42 / 0.04);
+  }
+
+  .badge {
+    transition: background-color 0.2s ease-smooth, color 0.2s ease-smooth, transform 0.25s ease-smooth;
+  }
+
+  .badge:hover {
+    transform: translateY(-1px);
   }
 
   .badge {
@@ -660,8 +711,8 @@ img {
   pointer-events: none;
   --aurora-opacity: 0.9;
 }
-:root[data-theme="light"] .aurora,
-.aurora-light {
+/* Светлая тема: туман бледнее и мягче */
+:root[data-theme="light"] .aurora {
   --aurora-opacity: 0.4;
 }
 
@@ -729,18 +780,32 @@ img {
 }
 
 /* ---------- Плавные reveal-анимации контента (data-reveal + IntersectionObserver в AppShell) ---------- */
-/* Прячем только когда JS гарантированно включит наблюдение (класс .reveal-ready на <html>). */
+/* Прячем только когда JS гарантированно включит наблюдение (класс .reveal-ready на <html>).
+   Всё на GPU-композитинге: translate3d + will-change, без задания layout. */
 html.reveal-ready [data-reveal] {
   opacity: 0;
-  transform: translateY(16px);
+  transform: translate3d(0, 18px, 0);
+  will-change: opacity, transform;
   transition:
-    opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 html.reveal-ready [data-reveal].reveal-in {
   opacity: 1;
-  transform: none;
+  transform: translate3d(0, 0, 0);
+  will-change: auto;
+}
+
+/* Вторые и последующие блоки внутри одной волны чуть дожидаются первых — лёгкий stagger */
+html.reveal-ready [data-reveal]:nth-child(2) {
+  transition-delay: 60ms;
+}
+html.reveal-ready [data-reveal]:nth-child(3) {
+  transition-delay: 110ms;
+}
+html.reveal-ready [data-reveal]:nth-child(4) {
+  transition-delay: 150ms;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -748,6 +813,17 @@ html.reveal-ready [data-reveal].reveal-in {
     opacity: 1;
     transform: none;
     transition: none;
+  }
+}
+
+@keyframes faq-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 

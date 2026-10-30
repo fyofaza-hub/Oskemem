@@ -201,7 +201,7 @@ const faq: Faq[] = [
   },
 ];
 
-/** Один раскрытый вопрос. */
+/** Один раскрытый вопрос. Немного «сочности»: контент появляется плавно. */
 function FaqItem({ question, answer }: Faq) {
   const [open, setOpen] = useState(false);
   return (
@@ -214,10 +214,19 @@ function FaqItem({ question, answer }: Faq) {
       >
         <Icon name="comment" size={16} className="shrink-0 text-accent" />
         <span className="min-w-0 flex-1">{question}</span>
-        <Icon name="chevronDown" size={16} className={cn("shrink-0 text-faint transition-transform", open && "rotate-180")} />
+        <Icon
+          name="chevronDown"
+          size={16}
+          className={cn(
+            "shrink-0 text-faint transition-transform duration-300 ease-smooth",
+            open && "rotate-180 text-accent",
+          )}
+        />
       </button>
       {open ? (
-        <p className="mt-3 pl-7 text-sm leading-relaxed text-muted">{answer}</p>
+        <p className="mt-3 animate-[faq-reveal_0.32s_ease-smooth] pl-7 text-sm leading-relaxed text-muted">
+          {answer}
+        </p>
       ) : null}
     </div>
   );
@@ -258,7 +267,7 @@ export function NavigationPage() {
       />
 
       {/* Что это за сайт — коротко и человеческим языком */}
-      <section className="card mt-6 p-5 sm:p-6">
+      <section data-reveal className="card mt-6 p-5 sm:p-6">
         <h2 className="font-display text-lg font-semibold text-fg">
           {tr("О чём вообще этот сайт?")}
         </h2>
@@ -275,7 +284,7 @@ export function NavigationPage() {
       </section>
 
       {/* Шаги первого знакомства */}
-      <section className="mt-8">
+      <section data-reveal className="mt-8">
         <h2 className="font-display text-xl font-semibold text-fg">
           {tr("Открываете первый раз? Пять простых шагов")}
         </h2>
@@ -308,7 +317,7 @@ export function NavigationPage() {
       </section>
 
       {/* Разделы сайта подробно */}
-      <section className="mt-10">
+      <section data-reveal className="mt-10">
         <h2 className="font-display text-xl font-semibold text-fg">
           {tr("Все разделы — что в них и зачем")}
         </h2>
@@ -346,7 +355,7 @@ export function NavigationPage() {
       </section>
 
       {/* Удобства в шапке, которые легко не заметить */}
-      <section className="mt-10">
+      <section data-reveal className="mt-10">
         <h2 className="font-display text-xl font-semibold text-fg">
           {tr("Полезные мелочи в шапке сайта")}
         </h2>
@@ -397,7 +406,7 @@ export function NavigationPage() {
       </section>
 
       {/* FAQ */}
-      <section className="mt-10">
+      <section data-reveal className="mt-10">
         <h2 className="font-display text-xl font-semibold text-fg">
           {tr("Частые вопросы")}
         </h2>

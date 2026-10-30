@@ -135,7 +135,7 @@ export function RoutesPage() {
         </div>
       ) : null}
 
-      <section className="card mt-6 p-3.5 sm:p-4" aria-label={tr("Поиск и фильтры")}>
+      <section data-reveal className="card mt-6 p-3.5 sm:p-4" aria-label={tr("Поиск и фильтры")}>
         <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center">
           <Input
             value={query}
@@ -254,7 +254,7 @@ export function RoutesPage() {
         )}
       </div>
 
-      <section className="mt-10 grid gap-6 rounded-2xl border border-line bg-surface p-5 sm:p-7 lg:grid-cols-[1fr_auto] lg:items-center">
+      <section data-reveal className="mt-10 grid gap-6 rounded-2xl border border-line bg-surface p-5 sm:p-7 lg:grid-cols-[1fr_auto] lg:items-center">
         <div>
           <h2 className="font-display text-xl font-semibold tracking-[-0.015em] text-fg sm:text-2xl">
             {tr("Два места — уже маршрут")}

@@ -177,7 +177,7 @@ export function GuidePage() {
         {pluralizePlaces(places.length)} · {categories.length} {tr("категорий")}
       </p>
 
-      <section className="card mt-6 p-3.5 sm:p-4" aria-label={tr("Поиск и фильтры")}>
+      <section data-reveal className="card mt-6 p-3.5 sm:p-4" aria-label={tr("Поиск и фильтры")}>
         <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
           <Input
             value={query}
@@ -323,7 +323,7 @@ export function GuidePage() {
         )}
       </div>
 
-      <section className="mt-10 flex flex-col gap-4 rounded-2xl border border-line bg-surface p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+      <section data-reveal className="mt-10 flex flex-col gap-4 rounded-2xl border border-line bg-surface p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
         <div className="flex items-start gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-ink">
             <Icon name="location" size={19} />

@@ -21,6 +21,12 @@ import { EventDetailModal } from "@/components/events/EventDetailModal";
 const featuredOrder = ["place-embankment", "place-history-museum", "place-theatre", "place-qurt-wine"];
 const routeOrder = ["route-saturday", "route-culture", "route-evening-light"];
 
+/**
+ * Фон иммерсивного баннера: закат над Иртышом с набережной (автор Bok, CC BY 4.0,
+ * кредит уже в src/data/credits.ts). Самый атмосферный кадр проекта.
+ */
+const HERO_IMAGE = "/images/embankment.webp";
+
 const planSteps = [
   { icon: "users" as const, label: tr("Компания") },
   { icon: "coins" as const, label: tr("Бюджет") },
@@ -55,31 +61,45 @@ export function HomePage() {
 
   return (
     <div className="page-wrap">
-      {/* Баннер-панель: градиент в токенах темы, фирменные пятна-свечения, контент поверх */}
+      {/* Иммерсивный баннер: установка «I love Oskemen», тёмная растушёвка, контент поверх */}
       <section
         data-reveal
-        className="relative isolate overflow-hidden rounded-3xl border border-line/60 bg-gradient-to-br from-sunken via-surface to-canvas shadow-raised"
+        className="group relative isolate overflow-hidden rounded-3xl border border-line/60 shadow-raised"
       >
-        {/* Декоративные пятна-свечения вместо фотографии */}
-        <div aria-hidden="true" className="absolute -top-28 right-[8%] h-80 w-80 rounded-full bg-accent/15 blur-3xl" />
-        <div aria-hidden="true" className="absolute -bottom-32 left-[30%] h-96 w-96 rounded-full bg-[rgb(59_91_173/0.16)] blur-3xl" />
+        <img
+          src={HERO_IMAGE}
+          alt=""
+          loading="eager"
+          decoding="async"
+          className="absolute inset-0 h-full w-full scale-100 object-cover object-center transition-transform duration-700 ease-smooth group-hover:scale-[1.03]"
+        />
+        {/* Тёмная растушёвка для контраста текста: слева плотнее, к правому краю прозрачнее */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/5" />
+        {/* Верх и низ — лёгкое затемнение, чтобы текст держался на любом кадре */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-black/25" />
 
-        <div className="relative z-10 flex min-h-[400px] flex-col justify-center px-6 py-14 sm:min-h-[440px] sm:px-10 sm:py-16 lg:min-h-[480px] lg:px-14 lg:py-20">
-          <p className="text-meta font-medium uppercase tracking-[0.16em] text-muted">
+        <div className="relative z-10 flex min-h-[440px] flex-col justify-center gap-4 px-6 py-14 sm:min-h-[480px] sm:px-10 sm:py-16 lg:min-h-[520px] lg:px-14 lg:py-20">
+          <p className="text-meta font-medium uppercase tracking-[0.16em] text-white/70">
             {greeting()}
             {firstName ? ", " + firstName : ""}
           </p>
-          <h1 className="mt-3 max-w-xl font-display text-[44px] font-semibold leading-[1.04] tracking-[-0.03em] text-fg sm:text-[56px] lg:text-[68px]">
+          <h1 className="max-w-xl font-display text-[44px] font-semibold leading-[1.04] tracking-[-0.03em] text-white drop-shadow-sm sm:text-[56px] lg:text-[68px]">
             {tr("Открой свой город")}
           </h1>
-          <p className="mt-4 max-w-md text-[17px] leading-relaxed text-muted">
+          <p className="max-w-md text-[17px] leading-relaxed text-white/85">
             {tr("Места, события и маршруты Өскемена — от людей, которые здесь живут.")}
           </p>
-          <div className="mt-8 flex flex-wrap items-center gap-3" data-tour="plan-cta">
+          <div className="mt-4 flex flex-wrap items-center gap-3" data-tour="plan-cta">
             <ButtonLink to="/plan" variant="primary" size="lg" icon="plan" className="px-6">
               {tr("Куда сходить?")}
             </ButtonLink>
-            <ButtonLink to="/guide" variant="secondary" size="lg" icon="guide" className="px-6">
+            <ButtonLink
+              to="/guide"
+              variant="secondary"
+              size="lg"
+              icon="guide"
+              className="border-white/25 bg-white/10 text-white backdrop-blur-sm hover:border-white/40 hover:bg-white/20"
+            >
               {tr("Смотреть места")}
             </ButtonLink>
           </div>
